@@ -193,136 +193,152 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&family=Montserrat:wght@300;400;600&family=Lobster&display=swap" rel="stylesheet" />
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" />
-    <style>
-      body {
-        font-family: "Montserrat", sans-serif;
-        color: #f5f5f5;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        min-height: 100vh;
-        overflow-y: scroll;
-        scroll-behavior: smooth;
-        position: relative;
-        background-image: url('https://cdn.glitch.global/011dd023-ea1f-4c61-a6b7-149b049e4922/The%20Dream%20(Legendary).WEBP?v=1738045211782');
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-        background-size: cover;
-      }
-      .navbar {
-        background-color: rgba(0, 0, 0, 0.8);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
-        width: 100%;
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-      }
-      .navbar-brand,
+    <style>body {
+  font-family: "Montserrat", sans-serif;
+  color: #f5f5f5;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  overflow-y: scroll;
+  scroll-behavior: smooth;
+  position: relative;
+  background-image: url('https://cdn.glitch.global/011dd023-ea1f-4c61-a6b7-149b049e4922/The%20Dream%20(Legendary).WEBP?v=1738045211782');
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
+}
+
+.navbar {
+  background-color: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.navbar-brand,
       .navbar-nav .nav-link {
-        color: #f5f5f5;
-        font-size: 1.2em;
-      }
-      .navbar-brand:hover,
+  color: #f5f5f5;
+  font-size: 1.2em;
+}
+
+.navbar-brand:hover,
       .navbar-nav .nav-link:hover {
-        color: #f9f5d7;
-      }
-      .popup {
-        position: absolute;
-        top: 40px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 200px;
-        padding: 10px;
-        background: rgba(0, 0, 0, 0.8);
-        color: #fff;
-        border-radius: 5px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        opacity: 0;
-        transition: opacity 0.3s, transform 0.3s;
-      }
-      .navbar-nav .nav-link:hover .popup {
-        opacity: 1;
-        transform: translateY(10px);
-      }
-      .header {
-        text-align: center;
-        margin-top: 70px;
-        color: #fff;
-      }
-      .header h1 {
-        font-family: "Indie Flower", cursive;
-        font-size: 4em;
-        text-shadow: 2px 2px 4px #000;
-      }
-      .header p {
-        font-size: 1.5em;
-        margin-top: 10px;
-      }
-      .container {
-        margin: 20px auto;
-        padding: 20px;
-        background-color: rgba(255, 255, 255, 0.95);
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        max-width: 1200px;
-        color: #333;
-      }
-      footer {
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        text-align: center;
-        padding: 10px;
-        background-color: rgba(0, 0, 0, 0.8);
-        color: #fff;
-        box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.5);
-      }
-      .section {
-        margin: 40px 0;
-      }
-      .section h2 {
-        font-size: 2.8em;
-        text-align: center;
-        margin-bottom: 20px;
-        color: #007bff;
-        text-shadow: 1px 1px 2px #ffebcd;
-      }
-      .section p {
-        font-size: 1.2em;
-        line-height: 1.6;
-        margin-bottom: 20px;
-      }
-      .embed-video {
-        position: relative;
-        padding-bottom: 56.25%;
-        height: 0;
-        overflow: hidden;
-        margin: 20px 0;
-      }
-      .embed-video iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-      }
-      .link-button {
-        display: inline-block;
-        background-color: #e67e22;
-        color: #fff;
-        padding: 12px 24px;
-        text-decoration: none;
-        border-radius: 25px;
-        font-weight: 600;
-        transition: background 0.3s;
-      }
-      .link-button:hover {
-        background-color: #d35400;
-      }
+  color: #f9f5d7;
+}
+
+.popup {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.navbar-nav .nav-link:hover .popup {
+  opacity: 1;
+  transform: translateY(10px);
+}
+
+.header {
+  text-align: center;
+  margin-top: 70px;
+  color: #fff;
+}
+
+.header h1 {
+  font-family: "Indie Flower", cursive;
+  font-size: 4em;
+  text-shadow: 2px 2px 4px #000;
+}
+
+.header p {
+  font-size: 1.5em;
+  margin-top: 10px;
+}
+
+.container {
+  margin: 20px auto;
+  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  max-width: 1200px;
+  color: #333;
+}
+
+footer {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  text-align: center;
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.section {
+  margin: 40px 0;
+}
+
+.section h2 {
+  font-size: 2.8em;
+  text-align: center;
+  margin-bottom: 20px;
+  color: #007bff;
+  text-shadow: 1px 1px 2px #ffebcd;
+}
+
+.section p {
+  font-size: 1.2em;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.embed-video {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  margin: 20px 0;
+}
+
+.embed-video iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.link-button {
+  display: inline-block;
+  background-color: #e67e22;
+  color: #fff;
+  padding: 12px 24px;
+  text-decoration: none;
+  border-radius: 25px;
+  font-weight: 600;
+  transition: background 0.3s;
+}
+
+.link-button:hover {
+  background-color: #d35400;
+}
     </style>
   </head>
   <body class="animate">
@@ -501,29 +517,7 @@
           .catch((error) => console.error(error));
       });
     </script>
-    <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyB8EaaBJ3tHZafzFhXn9qPI6W2NiVexHuk",
-    authDomain: "dawntasyai.firebaseapp.com",
-    projectId: "dawntasyai",
-    storageBucket: "dawntasyai.firebasestorage.app",
-    messagingSenderId: "809395170084",
-    appId: "1:809395170084:web:17401e10346345ca6e61b1",
-    measurementId: "G-61F3E88XMK"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
     <script> // Assuming your Firebase app is already initialized and db is defined as: 
       // const db = firebase.firestore(); 
     // Query the "users" collection and log each document's data 
@@ -538,3 +532,4 @@
     </script>
   </body>
 </html>
+
