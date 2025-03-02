@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DawntasyAI</title>
+  <script>
+    // Single Page App Redirect Script
+    // This script redirects to the root index.html for SPA routing
+    // when deployed on static file hosting like GitHub Pages
+    
+    // Get the current path (excluding base URL)
+    const segment = location.pathname.split('/').pop();
+    
+    // Redirect to the index.html with the path as a hash
+    const redirectURL = location.origin + 
+                       location.pathname.replace(segment, '') + 
+                       'index.html' + 
+                       (segment ? '#/' + segment : '');
+    
+    location.replace(redirectURL);
+  </script>
+</head>
+<body>
+  <h1 style="text-align: center; font-family: 'Orbitron', sans-serif; margin-top: 50px;">
+    Redirecting to DawntasyAI...
+  </h1>
+</body>
+</html>
