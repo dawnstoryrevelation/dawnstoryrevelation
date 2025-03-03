@@ -45,9 +45,12 @@ import { ref, onMounted, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useChatStore } from '../stores/chat';
 import { Timestamp } from 'firebase/firestore';
+import { callOpenAI } from '../services/openai';  // Import the OpenAI service for AI responses
+import { useAuthStore } from '../stores/auth';  // Import the authentication store
 
 // Stores & Router
 const chatStore = useChatStore();
+const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 
@@ -72,7 +75,7 @@ onMounted(async () => {
   currentChat.value = chatStore.currentChat;
 });
 
-// Send Message
+// Send Message with OpenAI Integration
 async function sendMessage() {
   if (!newMessage.value.trim()) return;
   
@@ -80,7 +83,16 @@ async function sendMessage() {
   newMessage.value = '';
 
   isTyping.value = true;
+  
+  // Step 1: Send user message to Firestore
   await chatStore.sendMessage(content);
+
+  // Step 2: Call OpenAI API to get AI response
+  const aiResponse = await callOpenAI(content, currentChat.value?.messages || []);
+  
+  // Step 3: Send AI response to Firestore
+  await chatStore.sendMessage(aiResponse);
+  
   isTyping.value = false;
 }
 
