@@ -73,9 +73,15 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/ai',
+    path: '/ai',  // This now correctly goes to app.html
     beforeEnter() {
-      window.location.href = '/ai.html'; // Redirect to static AI page
+      window.location.href = '/app.html';
+    }
+  },
+  {
+    path: '/ai-info',  // This now goes to the info page
+    beforeEnter() {
+      window.location.href = '/ai.html';
     }
   }
 ];
