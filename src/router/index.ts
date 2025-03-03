@@ -11,19 +11,19 @@ import Sidebar from '../components/Sidebar.vue';
 const routes = [
   {
     path: '/',
-    redirect: '/register'  // Redirect to register if not authenticated
+    redirect: '/register',  // Redirect to register if not authenticated
   },
   {
     path: '/register',
     name: 'Register',
     component: Register,
-    meta: { requiresAuth: false }  // No authentication required for register page
+    meta: { requiresAuth: false },  // No authentication required for register page
   },
   {
     path: '/login',
     name: 'Login',
     component: Login,
-    meta: { requiresAuth: false }  // No authentication required for login page
+    meta: { requiresAuth: false },  // No authentication required for login page
   },
   {
     path: '/home',
@@ -31,9 +31,9 @@ const routes = [
     components: {
       default: Home,
       header: Header,
-      sidebar: Sidebar
+      sidebar: Sidebar,
     },
-    meta: { requiresAuth: true }  // Requires authentication for home page
+    meta: { requiresAuth: true },  // Requires authentication for home page
   },
   {
     path: '/chat/:id',
@@ -41,9 +41,9 @@ const routes = [
     components: {
       default: Chat,
       header: Header,
-      sidebar: Sidebar
+      sidebar: Sidebar,
     },
-    meta: { requiresAuth: true }  // Requires authentication for chat page
+    meta: { requiresAuth: true },  // Requires authentication for chat page
   },
   {
     path: '/settings',
@@ -51,15 +51,15 @@ const routes = [
     components: {
       default: Settings,
       header: Header,
-      sidebar: Sidebar
+      sidebar: Sidebar,
     },
-    meta: { requiresAuth: true }  // Requires authentication for settings page
-  }
+    meta: { requiresAuth: true },  // Requires authentication for settings page
+  },
 ];
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
 });
 
 // Authentication guard before route change
@@ -69,8 +69,8 @@ router.beforeEach(async (to, from, next) => {
   // Initialize the authentication store and check if the user is authenticated
   await authStore.initAuth();
   
+  // If route requires authentication, but user is not authenticated, redirect to login/register
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    // Redirect to register/login page if the user is not authenticated
     next('/register');
   } else {
     next();  // Allow access to the requested route
