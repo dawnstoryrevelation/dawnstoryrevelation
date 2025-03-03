@@ -30,7 +30,8 @@ const routes = [
   {
     path: '/register',
     name: 'Register',
-    component: Register
+    component: Register,
+    meta: { requiresAuth: false } // ADDED THIS LINE
   },
   {
     path: '/chat/:id',
