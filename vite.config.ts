@@ -13,7 +13,15 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
-        changeOrigin: true
+        changeOrigin: true,
+        pathRewrite: { '^/api': '' }
+      }
+    }
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL('./public/app.html', import.meta.url))
       }
     }
   }
