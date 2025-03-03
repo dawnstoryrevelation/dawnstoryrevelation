@@ -2,11 +2,6 @@
   command = "npm run build"
   publish = "dist"
 
-[dev]
-  command = "npm run dev"
-  port = 3000
-  publish = "dist"
-
 [[redirects]]
   from = "/index.html"
   to = "/index.html"
