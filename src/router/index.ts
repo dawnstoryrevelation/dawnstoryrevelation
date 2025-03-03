@@ -5,14 +5,13 @@ import Login from '../views/Login.vue';
 import Register from '../views/Register.vue';
 import Chat from '../views/Chat.vue';
 import Settings from '../views/Settings.vue';
-import Profile from '../views/Profile.vue';
 import Header from '../components/Header.vue';
 import Sidebar from '../components/Sidebar.vue';
 
 const routes = [
   {
     path: '/',
-    redirect: '/register' // 🚀 Forces all users to start at Register
+    redirect: '/register' // Redirect users to register if they aren't authenticated
   },
   {
     path: '/register',
@@ -54,22 +53,6 @@ const routes = [
       sidebar: Sidebar
     },
     meta: { requiresAuth: true }
-  },
-  {
-    path: '/profile',
-    name: 'Profile',
-    components: {
-      default: Profile,
-      header: Header,
-      sidebar: Sidebar
-    },
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/ai',
-    beforeEnter() {
-      window.location.href = '/app.html';
-    }
   }
 ];
 
@@ -80,14 +63,14 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
-
+  
   await authStore.initAuth();
-
-  // 🔒 If the page requires authentication & the user is NOT logged in, redirect to Register
+  
+  // Protect routes requiring authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next('/register'); 
+    next('/register'); // Redirect to register if not authenticated
   } else {
-    next();
+    next(); // Proceed to the requested route
   }
 });
 
