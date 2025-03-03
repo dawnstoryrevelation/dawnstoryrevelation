@@ -11,18 +11,19 @@ import Sidebar from '../components/Sidebar.vue';
 const routes = [
   {
     path: '/',
-    redirect: '/register' // Redirect users to register if they aren't authenticated
+    redirect: '/register'  // Redirect to the register page if not authenticated
   },
   {
     path: '/register',
     name: 'Register',
     component: Register,
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false }  // No authentication required for register page
   },
   {
     path: '/login',
     name: 'Login',
-    component: Login
+    component: Login,
+    meta: { requiresAuth: false }  // No authentication required for login page
   },
   {
     path: '/home',
@@ -32,7 +33,7 @@ const routes = [
       header: Header,
       sidebar: Sidebar
     },
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true }  // Authentication required for home page
   },
   {
     path: '/chat/:id',
@@ -42,7 +43,7 @@ const routes = [
       header: Header,
       sidebar: Sidebar
     },
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true }  // Authentication required for chat page
   },
   {
     path: '/settings',
@@ -52,7 +53,7 @@ const routes = [
       header: Header,
       sidebar: Sidebar
     },
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true }  // Authentication required for settings page
   }
 ];
 
@@ -61,16 +62,16 @@ const router = createRouter({
   routes
 });
 
+// Navigation guard to protect routes that require authentication
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
   
-  await authStore.initAuth();
+  await authStore.initAuth();  // Wait for authentication state to be initialized
   
-  // Protect routes requiring authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next('/register'); // Redirect to register if not authenticated
+    next('/register');  // Redirect to register page if not authenticated
   } else {
-    next(); // Proceed to the requested route
+    next();  // Proceed to the requested route
   }
 });
 
