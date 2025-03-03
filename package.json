@@ -28,6 +28,6 @@
     "@vitejs/plugin-vue": "^5.2.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^7.32.0",
-    "eslint-plugin-vue": "^7.9.0"  // Corrected and completed the string
+    "eslint-plugin-vue": "^7.9.0" 
   }
 }
