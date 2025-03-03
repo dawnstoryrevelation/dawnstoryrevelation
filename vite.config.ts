@@ -14,15 +14,16 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-        pathRewrite: { '^/api': '' }
+        rewrite: path => path.replace(/^\/api/, '')
       }
     }
   },
   build: {
     rollupOptions: {
       input: {
-        main: fileURLToPath(new URL('./public/app.html', import.meta.url))
+        main: fileURLToPath(new URL('./app.html', import.meta.url)), // Fix path to app.html
       }
     }
-  }
+  },
+  base: './', // Ensures proper path resolution when deployed
 });
