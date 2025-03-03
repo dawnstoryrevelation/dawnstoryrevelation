@@ -2,13 +2,13 @@
   "name": "dawntasy-ai",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://Dawntasy.com/ai.html",
+  "homepage": "https://Dawntasy.com/app.html",
   "scripts": {
     "serve": "vite",
     "build": "vite build",
     "lint": "eslint --ext .js,.vue src",
     "dev": "vite",
-    "deploy": "vite build && cp -r dist/* ." // Deploys AI app to root directory
+    "deploy": "vite build && cp -r dist/* ." // Deploys AI app correctly
   },
   "dependencies": {
     "@tailwindcss/forms": "^0.5.10",
