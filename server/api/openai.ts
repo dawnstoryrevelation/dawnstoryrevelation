@@ -68,6 +68,9 @@ export function useOpenAI() {
         requestData
       );
       
+      // Optional: Save chat history to Firestore
+      saveChatToFirestore(messages);
+
       return response.data.choices[0].message;
     } catch (err: any) {
       console.error('OpenAI API error:', err);
@@ -77,12 +80,16 @@ export function useOpenAI() {
       isLoading.value = false;
     }
   }
-  
+
   /**
    * Save chat history to Firestore
    */
-  function saveChatToFirestore(userId: string, chatId: string, messages: Message[]) {
-    // This will be implemented in the Chat.vue component
+  async function saveChatToFirestore(messages: Message[]) {
+    // This method could directly be connected to your chat store or directly 
+    // from where you're sending/receiving messages.
+    // Implement the logic here to push the chat history to Firestore.
+    // Example: store the messages in the Firebase Firestore using Firebase SDK
+    // This would usually require a userId and chatId to correctly store the data.
   }
 
   return {
