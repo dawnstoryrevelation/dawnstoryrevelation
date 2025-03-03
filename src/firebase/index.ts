@@ -3,7 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// Your Firebase configuration
+// Your Firebase configuration (Using environment variables)
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -19,14 +19,15 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 
+// Export Firebase-related functions
 export { app, auth, firestore };
 
-// Access the OpenAI API key from environment variables
+// OpenAI API Key (from environment variables)
 const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
-// Example function using OpenAI API key (simplified)
+// Function to use OpenAI API Key
 const useOpenAiApiKey = () => {
-  // Use the API key as needed
+  return openaiApiKey; // Return the API key
 };
 
 export { useOpenAiApiKey };
