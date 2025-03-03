@@ -7,7 +7,6 @@ import Chat from '../views/Chat.vue';
 import ChatList from '../views/ChatList.vue';
 import Settings from '../views/Settings.vue';
 import Profile from '../views/Profile.vue';
-import AIComponent from '../components/AIComponent.vue';
 import Header from '../components/Header.vue';
 import Sidebar from '../components/Sidebar.vue';
 
@@ -75,18 +74,14 @@ const routes = [
   },
   {
     path: '/ai',
-    name: 'AI',
-    components: {
-      default: AIComponent,
-      header: Header,
-      sidebar: Sidebar
-    },
-    meta: { requiresAuth: true }
+    beforeEnter() {
+      window.location.href = '/ai.html'; // Redirect to static AI page
+    }
   }
 ];
 
 const router = createRouter({
-  history: createWebHistory(process.env.BASE_URL),
+  history: createWebHistory(),
   routes
 });
 
