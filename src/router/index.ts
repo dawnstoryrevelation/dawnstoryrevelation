@@ -73,13 +73,13 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/ai',  // This now correctly goes to app.html
+    path: '/ai',  // NOW CORRECTLY POINTS TO THE ACTUAL AI APP
     beforeEnter() {
       window.location.href = '/app.html';
     }
   },
   {
-    path: '/ai-info',  // This now goes to the info page
+    path: '/ai-info',  // NOW SEPARATE ROUTE FOR THE INFO PAGE
     beforeEnter() {
       window.location.href = '/ai.html';
     }
