@@ -11,7 +11,7 @@ import Sidebar from '../components/Sidebar.vue';
 const routes = [
   {
     path: '/',
-    redirect: '/register'  // Redirect to the register page if not authenticated
+    redirect: '/register'  // Redirect to register if not authenticated
   },
   {
     path: '/register',
@@ -33,7 +33,7 @@ const routes = [
       header: Header,
       sidebar: Sidebar
     },
-    meta: { requiresAuth: true }  // Authentication required for home page
+    meta: { requiresAuth: true }  // Requires authentication for home page
   },
   {
     path: '/chat/:id',
@@ -43,7 +43,7 @@ const routes = [
       header: Header,
       sidebar: Sidebar
     },
-    meta: { requiresAuth: true }  // Authentication required for chat page
+    meta: { requiresAuth: true }  // Requires authentication for chat page
   },
   {
     path: '/settings',
@@ -53,7 +53,7 @@ const routes = [
       header: Header,
       sidebar: Sidebar
     },
-    meta: { requiresAuth: true }  // Authentication required for settings page
+    meta: { requiresAuth: true }  // Requires authentication for settings page
   }
 ];
 
@@ -62,16 +62,18 @@ const router = createRouter({
   routes
 });
 
-// Navigation guard to protect routes that require authentication
+// Authentication guard before route change
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
   
-  await authStore.initAuth();  // Wait for authentication state to be initialized
+  // Initialize the authentication store and check if the user is authenticated
+  await authStore.initAuth();
   
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next('/register');  // Redirect to register page if not authenticated
+    // Redirect to register/login page if the user is not authenticated
+    next('/register');
   } else {
-    next();  // Proceed to the requested route
+    next();  // Allow access to the requested route
   }
 });
 
