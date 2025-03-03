@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from 'vue-router';
+import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import Home from '../views/Home.vue';
 import Login from '../views/Login.vue';
@@ -8,71 +8,97 @@ import ChatList from '../views/ChatList.vue';
 import Settings from '../views/Settings.vue';
 import Profile from '../views/Profile.vue';
 import AIComponent from '../components/AIComponent.vue';
+import Header from '../components/Header.vue';
+import Sidebar from '../components/Sidebar.vue';
 
 const routes = [
-    {
-        path: '/',
-        name: 'Home',
-        component: Home,
-        meta: { requiresAuth: true }
+  {
+    path: '/',
+    name: 'Home',
+    components: {
+      default: Home,
+      header: Header,
+      sidebar: Sidebar
     },
-    {
-        path: '/login',
-        name: 'Login',
-        component: Login
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: Register
+  },
+  {
+    path: '/chat/:id',
+    name: 'Chat',
+    components: {
+      default: Chat,
+      header: Header,
+      sidebar: Sidebar
     },
-    {
-        path: '/register',
-        name: 'Register',
-        component: Register
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/chats',
+    name: 'ChatList',
+    components: {
+      default: ChatList,
+      header: Header,
+      sidebar: Sidebar
     },
-    {
-        path: '/chat/:id',
-        name: 'Chat',
-        component: Chat,
-        meta: { requiresAuth: true }
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    components: {
+      default: Settings,
+      header: Header,
+      sidebar: Sidebar
     },
-    {
-        path: '/chats',
-        name: 'ChatList',
-        component: ChatList,
-        meta: { requiresAuth: true }
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    components: {
+      default: Profile,
+      header: Header,
+      sidebar: Sidebar
     },
-    {
-        path: '/settings',
-        name: 'Settings',
-        component: Settings,
-        meta: { requiresAuth: true }
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/ai',
+    name: 'AI',
+    components: {
+      default: AIComponent,
+      header: Header,
+      sidebar: Sidebar
     },
-    {
-        path: '/profile',
-        name: 'Profile',
-        component: Profile,
-        meta: { requiresAuth: true }
-    },
-    {
-        path: '/ai',
-        name: 'AI',
-        component: AIComponent,
-        meta: { requiresAuth: true }
-    }
+    meta: { requiresAuth: true }
+  }
 ];
 
 const router = createRouter({
-    history: createWebHashHistory(),
-    routes
+  history: createWebHistory(),
+  routes
 });
 
 router.beforeEach(async (to, from, next) => {
-    const authStore = useAuthStore();
+  const authStore = useAuthStore();
 
-    await authStore.initAuth();
+  await authStore.initAuth();
 
-    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-        next('/login');
-    } else {
-        next();
-    }
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    next('/login');
+  } else {
+    next();
+  }
 });
 
 export default router;

@@ -1,10 +1,17 @@
 module.exports = {
   // Use a relative path that works better for different deployment environments
-  publicPath: './',
+  publicPath: '/',
   outputDir: 'dist',
   assetsDir: 'assets',
   devServer: {
-    historyApiFallback: true
+    historyApiFallback: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        pathRewrite: { '^/api': '' }
+      }
+    }
   },
   // This ensures that the index.html file will be properly created
   // And all assets will be properly referenced
