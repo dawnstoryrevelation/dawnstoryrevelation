@@ -12,7 +12,7 @@ import {
   getDoc, 
   serverTimestamp 
 } from 'firebase/firestore';
-import { auth, db } from '../main';
+import { auth, db } from '../firebase'; // Make sure 'auth' and 'db' are imported from your Firebase setup
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -27,20 +27,20 @@ export const useAuthStore = defineStore('auth', {
       // Only initialize auth once
       if (this.authInitialized) return;
       
-      return new Promise((resolve) => {
+      return new Promise<void>((resolve) => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
-          if (user) {
-            // User is signed in
-            this.user = {
-              uid: user.uid,
-              email: user.email,
-              displayName: user.displayName,
-              photoURL: user.photoURL
-            };
-            this.isAuthenticated = true;
-            
-            // Get additional user data from Firestore
-            try {
+          try {
+            if (user) {
+              // User is signed in, setting up the user data
+              this.user = {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL
+              };
+              this.isAuthenticated = true;
+              
+              // Fetch additional user data from Firestore
               const userDoc = await getDoc(doc(db, 'users', user.uid));
               if (userDoc.exists()) {
                 this.user = {
@@ -48,24 +48,24 @@ export const useAuthStore = defineStore('auth', {
                   ...userDoc.data()
                 };
               }
-            } catch (error) {
-              console.error('Error fetching user data:', error);
+            } else {
+              // User is signed out
+              this.user = null;
+              this.isAuthenticated = false;
             }
-          } else {
-            // User is signed out
-            this.user = null;
-            this.isAuthenticated = false;
+          } catch (error) {
+            console.error('Error fetching user data:', error);
+          } finally {
+            this.isLoading = false;
+            this.authInitialized = true;
+            unsubscribe();  // Cleanup after authentication is initialized
+            resolve();
           }
-          
-          this.isLoading = false;
-          this.authInitialized = true;
-          unsubscribe();
-          resolve();
         });
       });
     },
     
-    async register(email, password, displayName) {
+    async register(email: string, password: string, displayName: string) {
       try {
         // Create user with email and password
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -98,17 +98,17 @@ export const useAuthStore = defineStore('auth', {
         return user;
       } catch (error) {
         console.error('Registration error:', error);
-        throw error;
+        throw error;  // Rethrow the error so you can handle it elsewhere
       }
     },
     
-    async login(email, password) {
+    async login(email: string, password: string) {
       try {
         // Sign in user
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
-        // Update last login timestamp
+        // Update last login timestamp in Firestore
         await setDoc(doc(db, 'users', user.uid), {
           lastLogin: serverTimestamp()
         }, { merge: true });
@@ -125,7 +125,7 @@ export const useAuthStore = defineStore('auth', {
         return user;
       } catch (error) {
         console.error('Login error:', error);
-        throw error;
+        throw error;  // Rethrow error so you can show an alert/message to the user
       }
     },
     
@@ -136,11 +136,11 @@ export const useAuthStore = defineStore('auth', {
         this.isAuthenticated = false;
       } catch (error) {
         console.error('Logout error:', error);
-        throw error;
+        throw error;  // Handle logout error if any
       }
     },
     
-    async updateUserProfile(profileData) {
+    async updateUserProfile(profileData: { displayName?: string; photoURL?: string }) {
       try {
         if (!auth.currentUser) throw new Error('No authenticated user');
         
@@ -167,7 +167,7 @@ export const useAuthStore = defineStore('auth', {
         return this.user;
       } catch (error) {
         console.error('Profile update error:', error);
-        throw error;
+        throw error;  // Handle any profile update errors
       }
     }
   }
