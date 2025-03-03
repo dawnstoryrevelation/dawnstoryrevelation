@@ -13,8 +13,38 @@
   status = 200
 
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
+  from = "/register"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/login"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/chat"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/chats"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/settings"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/profile"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/ai"
+  to = "/app.html"
   status = 200
 
 [functions]

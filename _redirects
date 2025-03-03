@@ -1,1 +1,7 @@
-/*    /index.html   200
+/register     /app.html    200
+/login        /app.html    200
+/chat         /app.html    200
+/chats        /app.html    200
+/settings     /app.html    200
+/profile      /app.html    200
+/ai           /app.html    200
