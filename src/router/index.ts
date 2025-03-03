@@ -31,7 +31,7 @@ const routes = [
     path: '/register',
     name: 'Register',
     component: Register,
-    meta: { requiresAuth: false } // ADDED THIS LINE
+    meta: { requiresAuth: false }
   },
   {
     path: '/chat/:id',
@@ -86,7 +86,7 @@ const routes = [
 ];
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(process.env.BASE_URL),
   routes
 });
 
