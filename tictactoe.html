@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Legendary 4x4 Tic Tac Toe with Epic Power-Ups</title>
+  <style>
+    /* Global Styles */
+    body {
+      background: #0d0d0d;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+      margin: 0;
+    }
+    h1 {
+      margin-bottom: 10px;
+      font-size: 2.8em;
+      color: #03dac6;
+      text-shadow: 2px 2px 4px #000;
+    }
+    #status {
+      margin-bottom: 20px;
+      font-size: 1.3em;
+      text-align: center;
+    }
+    /* Board Grid */
+    .board {
+      display: grid;
+      grid-template-columns: repeat(4, 80px);
+      grid-template-rows: repeat(4, 80px);
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .cell {
+      background: #1e1e1e;
+      border: 2px solid #03dac6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5em;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+      user-select: none;
+      position: relative;
+    }
+    .cell:hover {
+      background: #2a2a2a;
+    }
+    .cell.filled {
+      cursor: default;
+    }
+    .cell.selected {
+      border-color: #ff9800;
+      box-shadow: 0 0 10px #ff9800;
+    }
+    /* Pop Animation */
+    @keyframes pop {
+      0% { transform: scale(0); }
+      70% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    .pop {
+      animation: pop 0.3s ease-out;
+    }
+    /* Buttons */
+    .btn-container {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background: #03dac6;
+      color: #0d0d0d;
+      transition: background 0.3s, transform 0.2s;
+    }
+    button:hover {
+      background: #35e0a3;
+      transform: scale(1.05);
+    }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <h1>Legendary 4x4 Tic Tac Toe</h1>
+  <div id="status">Get ready to play!</div>
+  <div class="board" id="board"></div>
+  <div class="btn-container">
+    <button id="doubleMoveBtn">Double Move Power-Up</button>
+    <button id="swapMoveBtn">Swap Move Power-Up</button>
+    <button id="resetBtn">Reset Game</button>
+  </div>
+
+  <script>
+    // Game State Variables
+    let board = Array(16).fill("");
+    let currentPlayer = "X";
+    let movesThisTurn = 0;
+    let allowedMoves = 1; // normally one move per turn
+    const winningLines = [
+      [0,1,2,3], [4,5,6,7], [8,9,10,11], [12,13,14,15],      // rows
+      [0,4,8,12], [1,5,9,13], [2,6,10,14], [3,7,11,15],      // columns
+      [0,5,10,15], [3,6,9,12]                                 // diagonals
+    ];
+    let doubleMoveUsed = { "X": false, "O": false };
+    let swapMoveUsed = { "X": false, "O": false };
+    let swapActive = false;
+    let selectedSwapIndex = null;
+    let gameActive = true;
+
+    // DOM Elements
+    const boardElement = document.getElementById("board");
+    const statusElement = document.getElementById("status");
+    const doubleMoveBtn = document.getElementById("doubleMoveBtn");
+    const swapMoveBtn = document.getElementById("swapMoveBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    // Render the board cells
+    function renderBoard() {
+      boardElement.innerHTML = "";
+      board.forEach((cell, index) => {
+        const cellDiv = document.createElement("div");
+        cellDiv.classList.add("cell");
+        cellDiv.dataset.index = index;
+        cellDiv.textContent = cell;
+        cellDiv.addEventListener("click", () => handleCellClick(index, cellDiv));
+        boardElement.appendChild(cellDiv);
+      });
+    }
+
+    // Update status message
+    function updateStatus(message) {
+      statusElement.innerHTML = message + `<br><strong>Current Turn: ${currentPlayer}</strong>`;
+    }
+
+    // Check winning condition
+    function checkWin() {
+      for (const line of winningLines) {
+        const [a, b, c, d] = line;
+        if (board[a] && board[a] === board[b] && board[a] === board[c] && board[a] === board[d]) {
+          return board[a];
+        }
+      }
+      return null;
+    }
+
+    // Check if board is full
+    function checkTie() {
+      return board.every(cell => cell !== "");
+    }
+
+    // Switch to next player
+    function switchPlayer() {
+      currentPlayer = currentPlayer === "X" ? "O" : "X";
+      movesThisTurn = 0;
+      allowedMoves = 1;
+      // Enable power-ups if not used
+      doubleMoveBtn.disabled = doubleMoveUsed[currentPlayer];
+      swapMoveBtn.disabled = swapMoveUsed[currentPlayer];
+      updateStatus(`It's ${currentPlayer}'s turn.`);
+    }
+
+    // Disable further moves on the board (game over)
+    function disableBoard() {
+      gameActive = false;
+      document.querySelectorAll(".cell").forEach(cell => cell.style.pointerEvents = "none");
+      doubleMoveBtn.disabled = true;
+      swapMoveBtn.disabled = true;
+    }
+
+    // Handle normal cell clicks (when not in swap mode)
+    function handleCellClick(index, cellDiv) {
+      if (!gameActive) return;
+
+      // Swap Move Mode
+      if (swapActive) {
+        // If no cell selected yet and clicked cell has current player's marker, select it
+        if (selectedSwapIndex === null && board[index] === currentPlayer) {
+          selectedSwapIndex = index;
+          cellDiv.classList.add("selected");
+          updateStatus(`Swap Mode: Selected cell ${index + 1}. Now click an empty cell to swap into.`);
+          return;
+        }
+        // If a cell is already selected, allow swap if clicked cell is empty
+        if (selectedSwapIndex !== null && board[index] === "") {
+          board[index] = currentPlayer;
+          board[selectedSwapIndex] = "";
+          // Remove highlight from previously selected cell
+          document.querySelector(`[data-index='${selectedSwapIndex}']`).classList.remove("selected");
+          swapActive = false;
+          selectedSwapIndex = null;
+          renderBoard();
+          checkGameEnd();
+          if (gameActive) switchPlayer();
+          return;
+        }
+        // If clicked cell doesn't meet criteria, do nothing
+        return;
+      }
+
+      // Normal move: if cell is empty, mark it
+      if (board[index] !== "") return;
+      board[index] = currentPlayer;
+      cellDiv.textContent = currentPlayer;
+      cellDiv.classList.add("filled", "pop");
+      setTimeout(() => cellDiv.classList.remove("pop"), 300);
+      movesThisTurn++;
+
+      // Check win/tie
+      if (checkGameEnd()) return;
+
+      // If current move count is less than allowed (e.g. double move active), let the player move again.
+      if (movesThisTurn < allowedMoves) {
+        updateStatus(`Power-Up active! ${currentPlayer}, make your extra move.`);
+      } else {
+        switchPlayer();
+      }
+    }
+
+    // Check for win or tie and handle game over if needed
+    function checkGameEnd() {
+      const winner = checkWin();
+      if (winner) {
+        updateStatus(`Player ${winner} wins!`);
+        disableBoard();
+        return true;
+      } else if (checkTie()) {
+        updateStatus("It's a tie!");
+        disableBoard();
+        return true;
+      }
+      return false;
+    }
+
+    // Power-Up: Double Move (allows current player two moves in one turn)
+    doubleMoveBtn.addEventListener("click", () => {
+      if (!gameActive || doubleMoveUsed[currentPlayer]) return;
+      allowedMoves = 2;
+      doubleMoveUsed[currentPlayer] = true;
+      doubleMoveBtn.disabled = true;
+      updateStatus(`Double Move activated! ${currentPlayer} gets two moves this turn.`);
+    });
+
+    // Power-Up: Swap Move (allows current player to relocate one of their marks)
+    swapMoveBtn.addEventListener("click", () => {
+      if (!gameActive || swapMoveUsed[currentPlayer]) return;
+      swapActive = true;
+      swapMoveUsed[currentPlayer] = true;
+      swapMoveBtn.disabled = true;
+      updateStatus(`Swap Move activated! ${currentPlayer}, click one of your markers to move.`);
+    });
+
+    // Reset the game
+    resetBtn.addEventListener("click", () => {
+      board = Array(16).fill("");
+      currentPlayer = "X";
+      movesThisTurn = 0;
+      allowedMoves = 1;
+      doubleMoveUsed = { "X": false, "O": false };
+      swapMoveUsed = { "X": false, "O": false };
+      swapActive = false;
+      selectedSwapIndex = null;
+      gameActive = true;
+      doubleMoveBtn.disabled = false;
+      swapMoveBtn.disabled = false;
+      renderBoard();
+      updateStatus(`Game reset! It's ${currentPlayer}'s turn.`);
+    });
+
+    // Initial setup
+    renderBoard();
+    updateStatus(`Welcome! It's ${currentPlayer}'s turn. Choose your power-ups wisely.`);
+  </script>
+</body>
+</html>
