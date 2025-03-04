@@ -2,25 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Legendary Doodle Jump</title>
+  <title>Legendary Geometry Dash: Gravity Twist</title>
   <style>
+    /* Reset & Global Styles */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #222; font-family: 'Segoe UI', sans-serif; color: #fff; overflow: hidden; }
+    body {
+      background: #111;
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+      text-align: center;
+    }
     .screen {
       position: absolute;
-      top: 0; left: 0;
       width: 100%;
       height: 100%;
+      top: 0; left: 0;
       display: none;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      text-align: center;
+      background: #111;
       padding: 20px;
     }
-    #startScreen, #loseScreen { display: flex; }
-    h1 { font-size: 3em; margin-bottom: 20px; text-shadow: 2px 2px 4px #000; }
-    p, li { font-size: 1.2em; margin-bottom: 10px; }
+    #startScreen, #gameOverScreen { display: flex; }
+    h1 {
+      font-size: 3em;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 4px #000;
+    }
+    p, li {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+    }
     ul { text-align: left; }
     button {
       padding: 12px 24px;
@@ -28,299 +42,329 @@
       border: none;
       border-radius: 5px;
       background: #03dac6;
-      color: #222;
+      color: #111;
       cursor: pointer;
       margin-top: 20px;
       transition: transform 0.2s;
     }
     button:hover { transform: scale(1.05); }
-    #gameScreen { background: #000; display: flex; flex-direction: column; }
-    #gameCanvas { background: #333; border: 3px solid #fff; margin: 10px auto; display: block; }
+    /* Game Canvas */
+    #gameScreen {
+      display: none;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    }
+    #gameCanvas {
+      background: transparent;
+      border: 3px solid #fff;
+      display: block;
+      margin: 20px auto;
+    }
   </style>
 </head>
 <body>
-  <!-- Start Menu Screen -->
+  <!-- Start Menu -->
   <div id="startScreen" class="screen">
-    <h1>Legendary Doodle Jump</h1>
-    <p>Welcome to a doodle jump experience like no other!</p>
+    <h1>Legendary Geometry Dash</h1>
+    <p>Welcome to Geometry Dash with a twist—Gravity Flip!</p>
     <p><strong>How to Play:</strong></p>
     <ul>
-      <li>Use the left/right arrow keys (or tap left/right on mobile) to move.</li>
-      <li>Jump on platforms to climb higher.</li>
-      <li>Collect power-ups for epic boosts:</li>
-      <ul>
-        <li><strong>Jetpack:</strong> Gives an extra-boost jump!</li>
-        <li><strong>Slow Motion:</strong> Temporarily slows gravity.</li>
-      </ul>
-      <li>The higher you go, the faster the level—and the tougher it gets!</li>
-      <li>If you fall below the screen, the game is over.</li>
+      <li>Tap (or press Space) to jump.</li>
+      <li>Avoid obstacles as the level scrolls left.</li>
+      <li>Collect gravity flip power-ups (glowing circles) to invert gravity for 5 seconds.</li>
+      <li>When gravity is normal, you run on the floor; when flipped, you ride the ceiling.</li>
+      <li>The higher your score, the faster it gets. Good luck!</li>
     </ul>
     <button id="startButton">Start Game</button>
   </div>
 
   <!-- Game Screen -->
   <div id="gameScreen" class="screen">
-    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
   </div>
 
-  <!-- Lose Screen -->
-  <div id="loseScreen" class="screen">
+  <!-- Game Over Screen -->
+  <div id="gameOverScreen" class="screen">
     <h1>Game Over</h1>
     <p id="finalScore"></p>
     <button id="restartButton">Restart Game</button>
   </div>
 
   <script>
-    // Screen elements
+    /* ============
+       Global Variables
+       ============ */
     const startScreen = document.getElementById("startScreen");
     const gameScreen = document.getElementById("gameScreen");
-    const loseScreen = document.getElementById("loseScreen");
+    const gameOverScreen = document.getElementById("gameOverScreen");
     const startButton = document.getElementById("startButton");
     const restartButton = document.getElementById("restartButton");
     const finalScoreEl = document.getElementById("finalScore");
 
-    // Canvas & Context
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    // Game variables
-    let animationFrameId;
-    let gameOver = false;
+    let gameState = "start"; // start, playing, over
+    let animationId;
     let score = 0;
-    let level = 1;
-    const gravity = 0.5;
-    const friction = 0.9;
+    let obstacleSpeed = 4;
+    let spawnTimer = 0;
+    let powerUpTimer = 0;
+    let gravityFlipTime = 0; // frames remaining for gravity flip
 
-    // Player (the doodler)
-    let player = {
-      x: canvas.width / 2 - 15,
-      y: 500,
+    // Define lane positions for floor and ceiling
+    const FLOOR_Y = canvas.height - 50;
+    const CEILING_Y = 50;
+    // Player fixed x position
+    const PLAYER_X = 100;
+
+    // Player object
+    const player = {
+      x: PLAYER_X,
+      y: FLOOR_Y - 30, // initial y position (standing on floor)
       width: 30,
       height: 30,
-      vx: 0,
       vy: 0,
-      jumpForce: -12,
-      powerUp: null,   // "jetpack" or "slow"
-      powerUpTime: 0   // frames remaining for power-up
+      gravity: 0.6, // base gravity strength
+      jumpForce: -12, // jump force (will flip if gravity is inverted)
+      // gravityDirection: 1 for normal (floor), -1 for flipped (ceiling)
+      gravityDirection: 1 
     };
 
-    // Platforms array
-    let platforms = [];
-    // Power-ups array: each has x, y, width, height, type ("jetpack" or "slow")
+    // Obstacles array (each obstacle is an object with x, width, and lane)
+    let obstacles = [];
+    // Power-ups array (gravity flip power-ups)
     let powerUps = [];
 
-    // Key input tracking
-    let keys = {};
-    document.addEventListener("keydown", (e) => { keys[e.code] = true; });
-    document.addEventListener("keyup", (e) => { keys[e.code] = false; });
+    // Key/touch input
+    let jumpRequested = false;
 
-    // Touch controls for mobile: tap left/right half of canvas
+    /* ============
+       Event Listeners
+       ============ */
+    // Keyboard: Space key for jump
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space" && gameState === "playing") {
+        jumpRequested = true;
+      }
+    });
+    // Mobile: Tap on canvas for jump
     canvas.addEventListener("touchstart", (e) => {
-      e.preventDefault();
-      let touchX = e.touches[0].clientX;
-      if (touchX < canvas.width / 2) keys["ArrowLeft"] = true;
-      else keys["ArrowRight"] = true;
-    });
-    canvas.addEventListener("touchend", () => {
-      keys["ArrowLeft"] = false;
-      keys["ArrowRight"] = false;
-    });
-
-    // Initialize platforms
-    function initPlatforms() {
-      platforms = [];
-      // Create a base platform
-      platforms.push({ x: 150, y: 580, width: 100, height: 10 });
-      // Create several platforms upward
-      for (let i = 0; i < 10; i++) {
-        platforms.push({
-          x: Math.random() * (canvas.width - 80),
-          y: 600 - i * 60,
-          width: 80 + Math.random() * 40,
-          height: 10
-        });
+      if (gameState === "playing") {
+        jumpRequested = true;
       }
-    }
+    });
+    // Start & Restart Buttons
+    startButton.addEventListener("click", startGame);
+    restartButton.addEventListener("click", startGame);
 
-    // Possibly add a power-up on a platform (20% chance)
-    function maybeAddPowerUp(platform) {
-      if (Math.random() < 0.2) {
-        let type = Math.random() < 0.5 ? "jetpack" : "slow";
-        powerUps.push({
-          x: platform.x + platform.width / 2 - 10,
-          y: platform.y - 20,
-          width: 20,
-          height: 20,
-          type: type
-        });
-      }
-    }
+    /* ============
+       Game Functions
+       ============ */
 
-    // Initialize/restart the game
-    function initGame() {
-      gameOver = false;
+    // Start or Restart the game
+    function startGame() {
+      gameState = "playing";
       score = 0;
-      level = 1;
-      player.x = canvas.width / 2 - 15;
-      player.y = 500;
-      player.vx = 0;
+      obstacleSpeed = 4;
+      spawnTimer = 0;
+      powerUpTimer = 0;
+      gravityFlipTime = 0;
+      // Reset player to floor mode
+      player.y = FLOOR_Y - player.height;
       player.vy = 0;
-      player.powerUp = null;
-      player.powerUpTime = 0;
+      player.gravityDirection = 1;
       player.jumpForce = -12;
-      initPlatforms();
+      obstacles = [];
       powerUps = [];
+      // Switch screens
+      startScreen.style.display = "none";
+      gameOverScreen.style.display = "none";
+      gameScreen.style.display = "flex";
+      // Start game loop
+      animationId = requestAnimationFrame(gameLoop);
     }
 
-    // Update game state
-    function update() {
-      // Handle left/right input
-      if (keys["ArrowLeft"]) player.vx = -5;
-      else if (keys["ArrowRight"]) player.vx = 5;
-      else player.vx *= friction;
-
-      // Apply gravity (or slow gravity if power-up active)
-      if (player.powerUp === "slow") player.vy += gravity * 0.3;
-      else player.vy += gravity;
-
-      // Update player position
-      player.x += player.vx;
-      player.y += player.vy;
-
-      // Horizontal wrap-around
-      if (player.x < -player.width) player.x = canvas.width;
-      if (player.x > canvas.width) player.x = -player.width;
-
-      // Check collision with platforms (only when falling)
-      for (let plat of platforms) {
-        if (player.vy > 0 &&
-            player.x + player.width > plat.x &&
-            player.x < plat.x + plat.width &&
-            player.y + player.height > plat.y &&
-            player.y + player.height < plat.y + plat.height + player.vy) {
-          player.y = plat.y - player.height;
-          player.vy = player.jumpForce;
-          score += 10;
-          maybeAddPowerUp(plat);
-        }
-      }
-
-      // Check collision with power-ups
-      for (let i = powerUps.length - 1; i >= 0; i--) {
-        let pu = powerUps[i];
-        if (player.x < pu.x + pu.width &&
-            player.x + player.width > pu.x &&
-            player.y < pu.y + pu.height &&
-            player.y + player.height > pu.y) {
-          // Activate power-up effect
-          if (pu.type === "jetpack") {
-            player.vy = player.jumpForce * 1.5;
-          } else if (pu.type === "slow") {
-            player.powerUp = "slow";
-            player.powerUpTime = 300; // lasts ~5 seconds (300 frames)
-          }
-          powerUps.splice(i, 1);
-          score += 50;
-        }
-      }
-
-      // Power-up timer decrement
-      if (player.powerUp) {
-        player.powerUpTime--;
-        if (player.powerUpTime <= 0) player.powerUp = null;
-      }
-
-      // If player reaches upper half, scroll platforms and power-ups downward
-      if (player.y < canvas.height / 2) {
-        let diff = canvas.height / 2 - player.y;
-        player.y = canvas.height / 2;
-        platforms.forEach(plat => plat.y += diff);
-        powerUps.forEach(pu => pu.y += diff);
-        score += Math.floor(diff);
-      }
-
-      // Remove platforms that have scrolled off-screen and add new ones
-      platforms = platforms.filter(plat => plat.y < canvas.height);
-      while (platforms.length < 12) {
-        platforms.push({
-          x: Math.random() * (canvas.width - 80),
-          y: -Math.random() * 20,
-          width: 80 + Math.random() * 40,
-          height: 10
-        });
-      }
-
-      // Level progression: every 500 points, increase level and challenge
-      if (score > level * 500) {
-        level++;
-        // Make the jump a bit more challenging
-        player.jumpForce -= 1;
-      }
-
-      // Game over condition: player falls below the screen
-      if (player.y > canvas.height) endGame();
-    }
-
-    // Draw everything on the canvas
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Background
-      ctx.fillStyle = "#333";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      // Platforms
-      ctx.fillStyle = "#8bc34a";
-      platforms.forEach(plat => {
-        ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
-      });
-      // Power-ups
-      powerUps.forEach(pu => {
-        if (pu.type === "jetpack") ctx.fillStyle = "#ffeb3b";
-        else if (pu.type === "slow") ctx.fillStyle = "#03a9f4";
-        ctx.fillRect(pu.x, pu.y, pu.width, pu.height);
-      });
-      // Player (a simple white square)
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(player.x, player.y, player.width, player.height);
-      // HUD: Score, Level, and active Power-Up
-      ctx.fillStyle = "#fff";
-      ctx.font = "16px Arial";
-      ctx.fillText("Score: " + score, 10, 20);
-      ctx.fillText("Level: " + level, 10, 40);
-      if (player.powerUp) {
-        ctx.fillText("Power-Up: " + player.powerUp, 10, 60);
-      }
+    // End game and show Game Over screen
+    function endGame() {
+      gameState = "over";
+      cancelAnimationFrame(animationId);
+      finalScoreEl.textContent = "Your Score: " + score;
+      gameScreen.style.display = "none";
+      gameOverScreen.style.display = "flex";
     }
 
     // Main game loop
     function gameLoop() {
       update();
       draw();
-      animationFrameId = requestAnimationFrame(gameLoop);
+      if (gameState === "playing") {
+        animationId = requestAnimationFrame(gameLoop);
+      }
     }
 
-    // End the game, show lose screen
-    function endGame() {
-      cancelAnimationFrame(animationFrameId);
-      gameScreen.style.display = "none";
-      loseScreen.style.display = "flex";
-      finalScoreEl.textContent = "Your Score: " + score;
+    // Update game state
+    function update() {
+      // Increase score over time
+      score += 1;
+
+      // Gradually increase obstacle speed
+      obstacleSpeed = 4 + score / 1000;
+
+      // Handle jump input: if jump requested and player is on "ground"
+      if (jumpRequested) {
+        // Allow jump only if player is close to its lane
+        if (player.gravityDirection === 1 && player.y >= FLOOR_Y - player.height - 5) {
+          player.vy = player.jumpForce;
+        } else if (player.gravityDirection === -1 && player.y <= CEILING_Y + 5) {
+          // In inverted mode, jump force is reversed
+          player.vy = -player.jumpForce;
+        }
+        jumpRequested = false;
+      }
+
+      // Apply gravity (flip sign based on gravityDirection)
+      player.vy += player.gravity * player.gravityDirection;
+      player.y += player.vy;
+
+      // Keep player in bounds: if falling below floor or above ceiling, game over
+      if (player.gravityDirection === 1 && player.y > FLOOR_Y - player.height) {
+        player.y = FLOOR_Y - player.height;
+        player.vy = 0;
+      } else if (player.gravityDirection === -1 && player.y < CEILING_Y) {
+        player.y = CEILING_Y;
+        player.vy = 0;
+      }
+      
+      // Spawn obstacles periodically
+      spawnTimer++;
+      if (spawnTimer > 90) { // roughly every 1.5 seconds at 60fps
+        spawnTimer = 0;
+        // Obstacle appears in the lane that matches current gravity mode
+        let laneY = (player.gravityDirection === 1) ? FLOOR_Y - 30 : CEILING_Y;
+        obstacles.push({
+          x: canvas.width,
+          y: laneY,
+          width: 30 + Math.random() * 20,
+          height: 30
+        });
+      }
+      // Move obstacles leftwards and remove off-screen ones
+      obstacles.forEach(ob => ob.x -= obstacleSpeed);
+      obstacles = obstacles.filter(ob => ob.x + ob.width > 0);
+
+      // Spawn gravity flip power-ups occasionally
+      powerUpTimer++;
+      if (powerUpTimer > 300 && Math.random() < 0.02) { // occasional spawn
+        powerUpTimer = 0;
+        // Place power-up in the opposite lane to add risk/reward twist
+        let puLane = (player.gravityDirection === 1) ? -1 : 1;
+        let puY = (puLane === 1) ? FLOOR_Y - 40 : CEILING_Y + 10;
+        powerUps.push({
+          x: canvas.width,
+          y: puY,
+          radius: 12
+        });
+      }
+      // Move power-ups leftwards and remove off-screen
+      powerUps.forEach(pu => pu.x -= obstacleSpeed);
+      powerUps = powerUps.filter(pu => pu.x + pu.radius > 0);
+
+      // Check for collisions with obstacles
+      for (let ob of obstacles) {
+        if (rectCollision(player, ob)) {
+          endGame();
+          return;
+        }
+      }
+      // Check for collisions with power-ups
+      for (let i = powerUps.length - 1; i >= 0; i--) {
+        let pu = powerUps[i];
+        if (circleRectCollision(pu, player)) {
+          // Activate gravity flip power-up for 5 seconds (300 frames)
+          gravityFlipTime = 300;
+          // Flip gravity
+          player.gravityDirection *= -1;
+          // Adjust jump force accordingly (flip sign)
+          player.jumpForce *= -1;
+          // Remove collected power-up
+          powerUps.splice(i, 1);
+        }
+      }
+
+      // Handle gravity flip timer
+      if (gravityFlipTime > 0) {
+        gravityFlipTime--;
+        // When timer runs out, if gravity is still flipped (i.e. inverted mode), revert
+        if (gravityFlipTime === 0 && player.gravityDirection === -1) {
+          player.gravityDirection = 1;
+          // Ensure jumpForce is reset (if needed)
+          if (player.jumpForce > 0) player.jumpForce *= -1;
+          // Snap player back to floor if necessary
+          if (player.y < FLOOR_Y - player.height) player.y = FLOOR_Y - player.height;
+        }
+      }
     }
 
-    // Start or restart game when buttons are clicked
-    startButton.addEventListener("click", () => {
-      startScreen.style.display = "none";
-      loseScreen.style.display = "none";
-      gameScreen.style.display = "flex";
-      initGame();
-      gameLoop();
-    });
-    restartButton.addEventListener("click", () => {
-      loseScreen.style.display = "none";
-      startScreen.style.display = "none";
-      gameScreen.style.display = "flex";
-      initGame();
-      gameLoop();
-    });
+    // Draw everything on the canvas
+    function draw() {
+      // Change background gradient based on gravity state
+      if (player.gravityDirection === 1) {
+        // Normal: cool blue gradient
+        ctx.fillStyle = "#203a43";
+      } else {
+        // Inverted: vibrant purple gradient
+        ctx.fillStyle = "#4b1248";
+      }
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw player (a glowing square)
+      ctx.fillStyle = "#fff";
+      ctx.shadowColor = player.gravityDirection === 1 ? "#03dac6" : "#ff4081";
+      ctx.shadowBlur = 20;
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+      ctx.shadowBlur = 0;
+
+      // Draw obstacles (red blocks)
+      obstacles.forEach(ob => {
+        ctx.fillStyle = "#ff1744";
+        ctx.fillRect(ob.x, ob.y, ob.width, ob.height);
+      });
+
+      // Draw power-ups (glowing circles)
+      powerUps.forEach(pu => {
+        ctx.beginPath();
+        ctx.arc(pu.x, pu.y, pu.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffeb3b";
+        ctx.fill();
+        ctx.closePath();
+      });
+
+      // Draw HUD: Score at top-left
+      ctx.fillStyle = "#fff";
+      ctx.font = "20px Arial";
+      ctx.fillText("Score: " + score, 10, 30);
+    }
+
+    // Collision detection: Rectangle-Rectangle
+    function rectCollision(r1, r2) {
+      return (
+        r1.x < r2.x + r2.width &&
+        r1.x + r1.width > r2.x &&
+        r1.y < r2.y + r2.height &&
+        r1.y + r1.height > r2.y
+      );
+    }
+
+    // Collision detection: Circle-Rectangle
+    function circleRectCollision(circle, rect) {
+      // Find the closest point to the circle within the rectangle
+      let closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.width));
+      let closestY = Math.max(rect.y, Math.min(circle.y, rect.y + rect.height));
+      // Calculate the distance between the circle's center and this closest point
+      let dx = circle.x - closestX;
+      let dy = circle.y - closestY;
+      return (dx * dx + dy * dy) < (circle.radius * circle.radius);
+    }
   </script>
 </body>
 </html>
