@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Phantom Maze: Pac-Shift</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+    #gameCanvas {
+      background: #111;
+      display: block;
+      margin: 20px auto;
+      border: 2px solid #fff;
+    }
+    #status {
+      margin-top: 10px;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Phantom Maze: Pac-Shift</h1>
+  <canvas id="gameCanvas" width="600" height="600"></canvas>
+  <div id="status">Score: 0 | Phase Shift: OFF</div>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const statusDiv = document.getElementById("status");
+
+    // Grid settings
+    const ROWS = 15, COLS = 15;
+    const CELL_SIZE = 40; // 600/15 = 40 pixels per cell
+
+    // Maze cell types:
+    // 0: empty
+    // 1: permanent wall
+    // 2: dot (collectible)
+    // 3: phase power-up (activates role-reversal)
+    // 4: shifting wall (currently wall; toggles between wall and empty)
+
+    let maze = [];
+    let gameOver = false;
+    let score = 0;
+
+    // Initialize maze layout randomly
+    function initMaze() {
+      maze = [];
+      for (let r = 0; r < ROWS; r++) {
+        let row = [];
+        for (let c = 0; c < COLS; c++) {
+          // Set boundaries as permanent walls
+          if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) {
+            row.push(1);
+          } else {
+            // 20% chance for a wall; half of those become "shifting" walls (4)
+            if (Math.random() < 0.2) {
+              row.push(Math.random() < 0.5 ? 4 : 1);
+            } else {
+              // Otherwise, fill with a dot (2)
+              row.push(2);
+            }
+          }
+        }
+        maze.push(row);
+      }
+      // Place two phase power-ups (cell type 3) at random dot locations
+      let count = 0;
+      while (count < 2) {
+        let r = Math.floor(Math.random() * ROWS);
+        let c = Math.floor(Math.random() * COLS);
+        if (maze[r][c] === 2) {
+          maze[r][c] = 3;
+          count++;
+        }
+      }
+      // Clear the starting cells for player and ghost
+      maze[1][1] = 0; // Player start at top-left corner (inside boundary)
+      maze[ROWS - 2][COLS - 2] = 0; // Ghost spawn at bottom-right corner
+    }
+
+    // Player object
+    let player = {
+      row: 1,
+      col: 1,
+      phaseShift: false,  // When true, player turns into a ghost (blue) to chase foes!
+      phaseTime: 0        // Remaining phase shift time in ms
+    };
+
+    // Ghost object (for simplicity, we use one ghost—but you can add more!)
+    let ghosts = [
+      { row: ROWS - 2, col: COLS - 2 }
+    ];
+
+    // Update the on-screen status
+    function updateStatus() {
+      statusDiv.innerHTML = "Score: " + score + " | Phase Shift: " +
+        (player.phaseShift ? "ON (" + Math.ceil(player.phaseTime/1000) + "s)" : "OFF");
+    }
+
+    // Draw the maze, dots, walls, and power-ups
+    function drawMaze() {
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          let cell = maze[r][c];
+          let x = c * CELL_SIZE;
+          let y = r * CELL_SIZE;
+          if (cell === 1) {
+            // Permanent wall
+            ctx.fillStyle = "#444";
+            ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+          } else if (cell === 4) {
+            // Shifting wall (currently wall)
+            ctx.fillStyle = "#888";
+            ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+          } else {
+            // Empty cell background
+            ctx.fillStyle = "#000";
+            ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+            if (cell === 2) {
+              // Dot collectible
+              ctx.fillStyle = "#fff";
+              ctx.beginPath();
+              ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, 4, 0, 2*Math.PI);
+              ctx.fill();
+            } else if (cell === 3) {
+              // Phase power-up item
+              ctx.fillStyle = "#0ff";
+              ctx.beginPath();
+              ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, 8, 0, 2*Math.PI);
+              ctx.fill();
+            }
+          }
+        }
+      }
+    }
+
+    // Draw the player (yellow normally, blue when in phase shift)
+    function drawPlayer() {
+      let x = player.col * CELL_SIZE + CELL_SIZE/2;
+      let y = player.row * CELL_SIZE + CELL_SIZE/2;
+      ctx.beginPath();
+      ctx.arc(x, y, CELL_SIZE/2 - 4, 0, 2*Math.PI);
+      ctx.fillStyle = player.phaseShift ? "#00f" : "#ff0";
+      ctx.fill();
+    }
+
+    // Draw ghosts (red normally, orange when vulnerable in phase shift)
+    function drawGhosts() {
+      ghosts.forEach(ghost => {
+        let x = ghost.col * CELL_SIZE + CELL_SIZE/2;
+        let y = ghost.row * CELL_SIZE + CELL_SIZE/2;
+        ctx.beginPath();
+        ctx.arc(x, y, CELL_SIZE/2 - 4, 0, 2*Math.PI);
+        ctx.fillStyle = player.phaseShift ? "#ffa500" : "#f00";
+        ctx.fill();
+      });
+    }
+
+    // Main game loop: clear canvas, draw maze, player, and ghosts, and update timers
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawMaze();
+      drawPlayer();
+      drawGhosts();
+      updateStatus();
+
+      // Update phase shift timer
+      if (player.phaseShift) {
+        player.phaseTime -= 16; // approximate per frame (60fps)
+        if (player.phaseTime <= 0) {
+          player.phaseShift = false;
+          player.phaseTime = 0;
+        }
+      }
+      if (!gameOver) {
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    // Handle keyboard input for player movement
+    document.addEventListener("keydown", (e) => {
+      if (gameOver) return;
+      let newRow = player.row;
+      let newCol = player.col;
+      if (e.key === "ArrowUp") newRow--;
+      else if (e.key === "ArrowDown") newRow++;
+      else if (e.key === "ArrowLeft") newCol--;
+      else if (e.key === "ArrowRight") newCol++;
+      if (canMoveTo(newRow, newCol)) {
+        player.row = newRow;
+        player.col = newCol;
+        checkCell(newRow, newCol);
+        checkGhostCollision();
+      }
+    });
+
+    // Check if the destination cell is walkable (not a wall)
+    function canMoveTo(r, c) {
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return false;
+      let cell = maze[r][c];
+      if (cell === 1 || cell === 4) return false;
+      return true;
+    }
+
+    // When the player moves onto a cell, handle dot or power-up collection
+    function checkCell(r, c) {
+      let cell = maze[r][c];
+      if (cell === 2) { // dot
+        score += 10;
+        maze[r][c] = 0;
+      } else if (cell === 3) { // phase power-up
+        score += 50;
+        player.phaseShift = true;
+        player.phaseTime = 10000; // 10 seconds of phase shift
+        maze[r][c] = 0;
+      }
+    }
+
+    // Simple ghost movement AI (runs every 500ms)
+    function moveGhosts() {
+      ghosts.forEach(ghost => {
+        let directions = [];
+        let r = ghost.row, c = ghost.col;
+        if (isCellWalkable(r - 1, c)) directions.push({r: r - 1, c: c});
+        if (isCellWalkable(r + 1, c)) directions.push({r: r + 1, c: c});
+        if (isCellWalkable(r, c - 1)) directions.push({r: r, c: c - 1});
+        if (isCellWalkable(r, c + 1)) directions.push({r: r, c: c + 1});
+        if (directions.length === 0) return;
+        // Choose best direction: in normal mode, chase player (minimize distance);
+        // in phase shift mode, run away (maximize distance)
+        let bestDir = directions[0];
+        let bestDist = distance(bestDir.r, bestDir.c, player.row, player.col);
+        directions.forEach(dir => {
+          let d = distance(dir.r, dir.c, player.row, player.col);
+          if (player.phaseShift) {
+            if (d > bestDist) { bestDist = d; bestDir = dir; }
+          } else {
+            if (d < bestDist) { bestDist = d; bestDir = dir; }
+          }
+        });
+        ghost.row = bestDir.r;
+        ghost.col = bestDir.c;
+      });
+      checkGhostCollision();
+    }
+
+    // Helper: check if cell is walkable (for ghosts)
+    function isCellWalkable(r, c) {
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return false;
+      let cell = maze[r][c];
+      if (cell === 1 || cell === 4) return false;
+      return true;
+    }
+
+    // Manhattan distance between two cells
+    function distance(r1, c1, r2, c2) {
+      return Math.abs(r1 - r2) + Math.abs(c1 - c2);
+    }
+
+    // If ghost and player collide, handle based on phase shift state
+    function checkGhostCollision() {
+      ghosts.forEach(ghost => {
+        if (ghost.row === player.row && ghost.col === player.col) {
+          if (player.phaseShift) {
+            // In phase shift, player "eats" ghost!
+            score += 200;
+            // Reset ghost to spawn position
+            ghost.row = ROWS - 2;
+            ghost.col = COLS - 2;
+          } else {
+            // Game over if caught in normal mode
+            gameOver = true;
+            updateStatus();
+            alert("Game Over! Final Score: " + score);
+          }
+        }
+      });
+    }
+
+    // Maze shifting: every 3 seconds, toggle shifting walls (type 4)
+    function shiftMaze() {
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (maze[r][c] === 4) {
+            // 50% chance to become empty, 50% to remain wall
+            maze[r][c] = Math.random() < 0.5 ? 0 : 4;
+          }
+        }
+      }
+    }
+
+    // Set intervals for ghost movement and maze shifting
+    setInterval(() => {
+      if (!gameOver) moveGhosts();
+    }, 500);
+
+    setInterval(() => {
+      if (!gameOver) shiftMaze();
+    }, 3000);
+
+    // Main game initialization
+    function initGame() {
+      score = 0;
+      gameOver = false;
+      initMaze();
+      player.row = 1;
+      player.col = 1;
+      player.phaseShift = false;
+      player.phaseTime = 0;
+      ghosts = [{ row: ROWS - 2, col: COLS - 2 }];
+      updateStatus();
+      requestAnimationFrame(gameLoop);
+    }
+
+    initGame();
+  </script>
+</body>
+</html>
