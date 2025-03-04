@@ -1,8 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./index.html",
-    "./src/**/*.{vue,js,ts,jsx,tsx}",
+    "./app.html", // Include app.html for scanning Tailwind classes
+    "./src/**/*.{vue,js,ts,jsx,tsx}", // Scan all Vue, JS, TS files in the src folder
   ],
   theme: {
     extend: {
