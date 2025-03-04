@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Legendary Animated Hangman</title>
+  <style>
+    /* Global Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background: #1d1f21;
+      color: #c5c8c6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    h1 {
+      margin-bottom: 20px;
+      font-size: 2.5em;
+      color: #81a2be;
+    }
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    /* Hangman Drawing Styles */
+    .hangman-drawing {
+      width: 200px;
+      height: 250px;
+      position: relative;
+      margin-bottom: 20px;
+    }
+    /* Gallows Structure */
+    .gallows {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 150px;
+      height: 200px;
+    }
+    .gallows .base {
+      width: 150px;
+      height: 10px;
+      background: #c5c8c6;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+    }
+    .gallows .pole {
+      width: 10px;
+      height: 150px;
+      background: #c5c8c6;
+      position: absolute;
+      bottom: 10px;
+      left: 20px;
+    }
+    .gallows .beam {
+      width: 80px;
+      height: 10px;
+      background: #c5c8c6;
+      position: absolute;
+      bottom: 150px;
+      left: 20px;
+    }
+    .gallows .rope {
+      width: 2px;
+      height: 30px;
+      background: #c5c8c6;
+      position: absolute;
+      bottom: 150px;
+      left: 100px;
+    }
+    /* Hangman Parts (Animated Appearance) */
+    .hangman-part {
+      position: absolute;
+      opacity: 0;
+      animation: fadeIn 0.5s forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    /* Head */
+    .head {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 3px solid #ff5555;
+      top: 180px;
+      left: 90px;
+    }
+    /* Body */
+    .body {
+      width: 3px;
+      height: 50px;
+      background: #ff5555;
+      top: 210px;
+      left: 104px;
+    }
+    /* Left Arm */
+    .left-arm {
+      width: 3px;
+      height: 30px;
+      background: #ff5555;
+      top: 220px;
+      left: 104px;
+      transform: rotate(-45deg);
+      transform-origin: top;
+    }
+    /* Right Arm */
+    .right-arm {
+      width: 3px;
+      height: 30px;
+      background: #ff5555;
+      top: 220px;
+      left: 104px;
+      transform: rotate(45deg);
+      transform-origin: top;
+    }
+    /* Left Leg */
+    .left-leg {
+      width: 3px;
+      height: 30px;
+      background: #ff5555;
+      top: 260px;
+      left: 104px;
+      transform: rotate(-30deg);
+      transform-origin: top;
+    }
+    /* Right Leg */
+    .right-leg {
+      width: 3px;
+      height: 30px;
+      background: #ff5555;
+      top: 260px;
+      left: 104px;
+      transform: rotate(30deg);
+      transform-origin: top;
+    }
+    /* Word Display */
+    .word-container {
+      font-size: 2em;
+      letter-spacing: 10px;
+      margin-bottom: 20px;
+    }
+    .letter {
+      display: inline-block;
+      width: 30px;
+      border-bottom: 2px solid #81a2be;
+      text-align: center;
+    }
+    /* Wrong Letters */
+    .wrong-letters {
+      margin-top: 20px;
+      font-size: 1.5em;
+      color: #ff5555;
+    }
+    /* On-Screen Keyboard */
+    .keyboard {
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      max-width: 600px;
+      justify-content: center;
+    }
+    .key {
+      width: 40px;
+      height: 40px;
+      margin: 5px;
+      background: #373b41;
+      color: #c5c8c6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background 0.3s;
+    }
+    .key:hover {
+      background: #81a2be;
+    }
+    .key.disabled {
+      pointer-events: none;
+      background: #555;
+    }
+    /* Reset Button */
+    .reset-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #81a2be;
+      color: #1d1f21;
+      border: none;
+      border-radius: 5px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .reset-btn:hover {
+      background: #a8b0c0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Legendary Animated Hangman</h1>
+  <div class="game-container">
+    <div class="hangman-drawing">
+      <div class="gallows">
+        <div class="base"></div>
+        <div class="pole"></div>
+        <div class="beam"></div>
+        <div class="rope"></div>
+      </div>
+      <!-- Hangman parts will be added here dynamically -->
+    </div>
+    <div class="word-container" id="word"></div>
+    <div class="wrong-letters" id="wrong-letters"></div>
+    <div class="keyboard" id="keyboard"></div>
+    <button class="reset-btn" id="reset">Reset Game</button>
+  </div>
+
+  <script>
+    // A bunch of secret words for legendary fun!
+    const words = [
+      "javascript", "programming", "hangman", "legendary", "animated",
+      "superduper", "professional", "epic", "challenge", "innovation",
+      "genius", "coding", "adventure", "mystery", "dynamic", "unbelievable",
+      "astonishing", "incredible", "phenomenal", "spectacular", "fantastic",
+      "mindblowing", "revolutionary", "avantgarde", "futuristic", "visionary"
+    ];
+    let secretWord = words[Math.floor(Math.random() * words.length)];
+    let correctLetters = [];
+    let wrongLetters = [];
+    const maxWrong = 6;
+    
+    // DOM Elements
+    const wordContainer = document.getElementById("word");
+    const wrongLettersContainer = document.getElementById("wrong-letters");
+    const keyboardContainer = document.getElementById("keyboard");
+    const resetButton = document.getElementById("reset");
+    const hangmanDrawing = document.querySelector(".hangman-drawing");
+
+    // Order for drawing hangman parts
+    const hangmanParts = ["head", "body", "left-arm", "right-arm", "left-leg", "right-leg"];
+
+    // Display the secret word with unknown letters as underscores
+    function displayWord() {
+      wordContainer.innerHTML = secretWord.split("").map(letter => {
+        return `<span class="letter">${correctLetters.includes(letter) ? letter : "_"}</span>`;
+      }).join("");
+      
+      // Check win condition
+      if (secretWord.split("").every(letter => correctLetters.includes(letter))) {
+        setTimeout(() => alert("Congrats! You won!"), 100);
+      }
+    }
+
+    // Update wrong letters and add hangman parts with animation
+    function updateWrongLetters() {
+      wrongLettersContainer.innerHTML = wrongLetters.length > 0 ? "Wrong: " + wrongLetters.join(", ") : "";
+      
+      hangmanParts.forEach((part, index) => {
+        if (index < wrongLetters.length) {
+          if (!document.querySelector("." + part)) {
+            const partElement = document.createElement("div");
+            partElement.classList.add("hangman-part", part);
+            hangmanDrawing.appendChild(partElement);
+          }
+        } else {
+          const el = document.querySelector("." + part);
+          if (el) {
+            hangmanDrawing.removeChild(el);
+          }
+        }
+      });
+
+      // Check loss condition
+      if (wrongLetters.length === maxWrong) {
+        setTimeout(() => alert("Game Over! The word was: " + secretWord), 100);
+      }
+    }
+
+    // Handle each guessed letter
+    function handleGuess(letter) {
+      if (secretWord.includes(letter)) {
+        if (!correctLetters.includes(letter)) {
+          correctLetters.push(letter);
+          displayWord();
+        }
+      } else {
+        if (!wrongLetters.includes(letter)) {
+          wrongLetters.push(letter);
+          updateWrongLetters();
+        }
+      }
+    }
+
+    // Create an on-screen keyboard for letter selection
+    function createKeyboard() {
+      const alphabet = "abcdefghijklmnopqrstuvwxyz";
+      keyboardContainer.innerHTML = "";
+      for (let char of alphabet) {
+        const key = document.createElement("div");
+        key.classList.add("key");
+        key.textContent = char;
+        key.addEventListener("click", () => {
+          key.classList.add("disabled");
+          handleGuess(char);
+        });
+        keyboardContainer.appendChild(key);
+      }
+    }
+
+    // Reset game state
+    function resetGame() {
+      secretWord = words[Math.floor(Math.random() * words.length)];
+      correctLetters = [];
+      wrongLetters = [];
+      wordContainer.innerHTML = "";
+      wrongLettersContainer.innerHTML = "";
+      keyboardContainer.innerHTML = "";
+      // Reset hangman drawing (keep gallows intact)
+      hangmanDrawing.innerHTML = '<div class="gallows"><div class="base"></div><div class="pole"></div><div class="beam"></div><div class="rope"></div></div>';
+      createKeyboard();
+      displayWord();
+    }
+
+    resetButton.addEventListener("click", resetGame);
+
+    // Initial setup
+    createKeyboard();
+    displayWord();
+
+    // Optional: Allow keyboard input for guessing
+    window.addEventListener("keydown", (e) => {
+      if (e.key >= "a" && e.key <= "z") {
+        const keyEl = [...document.querySelectorAll(".key")].find(el => el.textContent === e.key);
+        if (keyEl && !keyEl.classList.contains("disabled")) {
+          keyEl.classList.add("disabled");
+          handleGuess(e.key);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
