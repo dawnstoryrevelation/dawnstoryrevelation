@@ -4,9 +4,9 @@ module.exports = {
   assetsDir: 'assets',
   devServer: {
     historyApiFallback: {
+      // Rewrite all routes to index.html, allowing Vue Router to handle them
       rewrites: [
-        { from: /^\/$/, to: '/app.html' },
-        { from: /./, to: '/app.html' }
+        { from: /^(?!\/app.html$)/, to: '/index.html' } // Handle all non-app.html URLs
       ]
     },
     proxy: {
@@ -28,4 +28,4 @@ module.exports = {
       });
     }
   }
-}
+};
