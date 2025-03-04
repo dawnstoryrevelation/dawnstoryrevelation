@@ -2,369 +2,136 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Legendary Geometry Dash: Gravity Twist</title>
+  <title>Legendary Cosmic Particle Symphony</title>
   <style>
-    /* Reset & Global Styles */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #111;
-      color: #fff;
-      font-family: 'Segoe UI', sans-serif;
+    html, body {
+      margin: 0;
+      padding: 0;
       overflow: hidden;
-      text-align: center;
+      background: #000;
+      font-family: 'Segoe UI', sans-serif;
     }
-    .screen {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      top: 0; left: 0;
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background: #111;
-      padding: 20px;
-    }
-    #startScreen, #gameOverScreen { display: flex; }
-    h1 {
-      font-size: 3em;
-      margin-bottom: 20px;
-      text-shadow: 2px 2px 4px #000;
-    }
-    p, li {
-      font-size: 1.2em;
-      margin-bottom: 10px;
-    }
-    ul { text-align: left; }
-    button {
-      padding: 12px 24px;
-      font-size: 1.2em;
-      border: none;
-      border-radius: 5px;
-      background: #03dac6;
-      color: #111;
-      cursor: pointer;
-      margin-top: 20px;
-      transition: transform 0.2s;
-    }
-    button:hover { transform: scale(1.05); }
-    /* Game Canvas */
-    #gameScreen {
-      display: none;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-    }
-    #gameCanvas {
-      background: transparent;
-      border: 3px solid #fff;
+    canvas {
       display: block;
-      margin: 20px auto;
+    }
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: #fff;
+      font-size: 16px;
+      z-index: 10;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <!-- Start Menu -->
-  <div id="startScreen" class="screen">
-    <h1>Legendary Geometry Dash</h1>
-    <p>Welcome to Geometry Dash with a twist—Gravity Flip!</p>
-    <p><strong>How to Play:</strong></p>
-    <ul>
-      <li>Tap (or press Space) to jump.</li>
-      <li>Avoid obstacles as the level scrolls left.</li>
-      <li>Collect gravity flip power-ups (glowing circles) to invert gravity for 5 seconds.</li>
-      <li>When gravity is normal, you run on the floor; when flipped, you ride the ceiling.</li>
-      <li>The higher your score, the faster it gets. Good luck!</li>
-    </ul>
-    <button id="startButton">Start Game</button>
-  </div>
-
-  <!-- Game Screen -->
-  <div id="gameScreen" class="screen">
-    <canvas id="gameCanvas" width="600" height="400"></canvas>
-  </div>
-
-  <!-- Game Over Screen -->
-  <div id="gameOverScreen" class="screen">
-    <h1>Game Over</h1>
-    <p id="finalScore"></p>
-    <button id="restartButton">Restart Game</button>
-  </div>
-
+  <div id="info">Move your mouse to influence the cosmic flow.</div>
+  <canvas id="canvas"></canvas>
   <script>
-    /* ============
-       Global Variables
-       ============ */
-    const startScreen = document.getElementById("startScreen");
-    const gameScreen = document.getElementById("gameScreen");
-    const gameOverScreen = document.getElementById("gameOverScreen");
-    const startButton = document.getElementById("startButton");
-    const restartButton = document.getElementById("restartButton");
-    const finalScoreEl = document.getElementById("finalScore");
-
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-
-    let gameState = "start"; // start, playing, over
-    let animationId;
-    let score = 0;
-    let obstacleSpeed = 4;
-    let spawnTimer = 0;
-    let powerUpTimer = 0;
-    let gravityFlipTime = 0; // frames remaining for gravity flip
-
-    // Define lane positions for floor and ceiling
-    const FLOOR_Y = canvas.height - 50;
-    const CEILING_Y = 50;
-    // Player fixed x position
-    const PLAYER_X = 100;
-
-    // Player object
-    const player = {
-      x: PLAYER_X,
-      y: FLOOR_Y - 30, // initial y position (standing on floor)
-      width: 30,
-      height: 30,
-      vy: 0,
-      gravity: 0.6, // base gravity strength
-      jumpForce: -12, // jump force (will flip if gravity is inverted)
-      // gravityDirection: 1 for normal (floor), -1 for flipped (ceiling)
-      gravityDirection: 1 
-    };
-
-    // Obstacles array (each obstacle is an object with x, width, and lane)
-    let obstacles = [];
-    // Power-ups array (gravity flip power-ups)
-    let powerUps = [];
-
-    // Key/touch input
-    let jumpRequested = false;
-
-    /* ============
-       Event Listeners
-       ============ */
-    // Keyboard: Space key for jump
-    document.addEventListener("keydown", (e) => {
-      if (e.code === "Space" && gameState === "playing") {
-        jumpRequested = true;
-      }
-    });
-    // Mobile: Tap on canvas for jump
-    canvas.addEventListener("touchstart", (e) => {
-      if (gameState === "playing") {
-        jumpRequested = true;
-      }
-    });
-    // Start & Restart Buttons
-    startButton.addEventListener("click", startGame);
-    restartButton.addEventListener("click", startGame);
-
-    /* ============
-       Game Functions
-       ============ */
-
-    // Start or Restart the game
-    function startGame() {
-      gameState = "playing";
-      score = 0;
-      obstacleSpeed = 4;
-      spawnTimer = 0;
-      powerUpTimer = 0;
-      gravityFlipTime = 0;
-      // Reset player to floor mode
-      player.y = FLOOR_Y - player.height;
-      player.vy = 0;
-      player.gravityDirection = 1;
-      player.jumpForce = -12;
-      obstacles = [];
-      powerUps = [];
-      // Switch screens
-      startScreen.style.display = "none";
-      gameOverScreen.style.display = "none";
-      gameScreen.style.display = "flex";
-      // Start game loop
-      animationId = requestAnimationFrame(gameLoop);
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    
+    // Resize canvas to fill the window
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
     }
+    window.addEventListener('resize', resize);
+    resize();
 
-    // End game and show Game Over screen
-    function endGame() {
-      gameState = "over";
-      cancelAnimationFrame(animationId);
-      finalScoreEl.textContent = "Your Score: " + score;
-      gameScreen.style.display = "none";
-      gameOverScreen.style.display = "flex";
-    }
-
-    // Main game loop
-    function gameLoop() {
-      update();
-      draw();
-      if (gameState === "playing") {
-        animationId = requestAnimationFrame(gameLoop);
+    // Create an array of particles
+    const particles = [];
+    const particleCount = 250;
+    
+    class Particle {
+      constructor() {
+        this.reset();
       }
-    }
-
-    // Update game state
-    function update() {
-      // Increase score over time
-      score += 1;
-
-      // Gradually increase obstacle speed
-      obstacleSpeed = 4 + score / 1000;
-
-      // Handle jump input: if jump requested and player is on "ground"
-      if (jumpRequested) {
-        // Allow jump only if player is close to its lane
-        if (player.gravityDirection === 1 && player.y >= FLOOR_Y - player.height - 5) {
-          player.vy = player.jumpForce;
-        } else if (player.gravityDirection === -1 && player.y <= CEILING_Y + 5) {
-          // In inverted mode, jump force is reversed
-          player.vy = -player.jumpForce;
+      reset() {
+        // Start at a random position within the canvas
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        // Random initial velocity for a subtle drift
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+        // Lifespan properties
+        this.life = Math.random() * 100 + 100;
+        this.maxLife = this.life;
+        // Radius for particle size
+        this.radius = Math.random() * 2 + 1;
+        // Choose a cosmic color from a palette
+        const colors = ['#6a00ff', '#a100ff', '#00f0ff', '#00ffd5'];
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+      }
+      update() {
+        // Move the particle
+        this.x += this.vx;
+        this.y += this.vy;
+        // Add a touch of randomness (turbulence)
+        this.vx += (Math.random() - 0.5) * 0.02;
+        this.vy += (Math.random() - 0.5) * 0.02;
+        // Decrease life
+        this.life--;
+        if (this.life <= 0) {
+          this.reset();
         }
-        jumpRequested = false;
+        // Wrap around the edges for a seamless flow
+        if (this.x < 0) this.x = width;
+        if (this.x > width) this.x = 0;
+        if (this.y < 0) this.y = height;
+        if (this.y > height) this.y = 0;
       }
-
-      // Apply gravity (flip sign based on gravityDirection)
-      player.vy += player.gravity * player.gravityDirection;
-      player.y += player.vy;
-
-      // Keep player in bounds: if falling below floor or above ceiling, game over
-      if (player.gravityDirection === 1 && player.y > FLOOR_Y - player.height) {
-        player.y = FLOOR_Y - player.height;
-        player.vy = 0;
-      } else if (player.gravityDirection === -1 && player.y < CEILING_Y) {
-        player.y = CEILING_Y;
-        player.vy = 0;
-      }
-      
-      // Spawn obstacles periodically
-      spawnTimer++;
-      if (spawnTimer > 90) { // roughly every 1.5 seconds at 60fps
-        spawnTimer = 0;
-        // Obstacle appears in the lane that matches current gravity mode
-        let laneY = (player.gravityDirection === 1) ? FLOOR_Y - 30 : CEILING_Y;
-        obstacles.push({
-          x: canvas.width,
-          y: laneY,
-          width: 30 + Math.random() * 20,
-          height: 30
-        });
-      }
-      // Move obstacles leftwards and remove off-screen ones
-      obstacles.forEach(ob => ob.x -= obstacleSpeed);
-      obstacles = obstacles.filter(ob => ob.x + ob.width > 0);
-
-      // Spawn gravity flip power-ups occasionally
-      powerUpTimer++;
-      if (powerUpTimer > 300 && Math.random() < 0.02) { // occasional spawn
-        powerUpTimer = 0;
-        // Place power-up in the opposite lane to add risk/reward twist
-        let puLane = (player.gravityDirection === 1) ? -1 : 1;
-        let puY = (puLane === 1) ? FLOOR_Y - 40 : CEILING_Y + 10;
-        powerUps.push({
-          x: canvas.width,
-          y: puY,
-          radius: 12
-        });
-      }
-      // Move power-ups leftwards and remove off-screen
-      powerUps.forEach(pu => pu.x -= obstacleSpeed);
-      powerUps = powerUps.filter(pu => pu.x + pu.radius > 0);
-
-      // Check for collisions with obstacles
-      for (let ob of obstacles) {
-        if (rectCollision(player, ob)) {
-          endGame();
-          return;
-        }
-      }
-      // Check for collisions with power-ups
-      for (let i = powerUps.length - 1; i >= 0; i--) {
-        let pu = powerUps[i];
-        if (circleRectCollision(pu, player)) {
-          // Activate gravity flip power-up for 5 seconds (300 frames)
-          gravityFlipTime = 300;
-          // Flip gravity
-          player.gravityDirection *= -1;
-          // Adjust jump force accordingly (flip sign)
-          player.jumpForce *= -1;
-          // Remove collected power-up
-          powerUps.splice(i, 1);
-        }
-      }
-
-      // Handle gravity flip timer
-      if (gravityFlipTime > 0) {
-        gravityFlipTime--;
-        // When timer runs out, if gravity is still flipped (i.e. inverted mode), revert
-        if (gravityFlipTime === 0 && player.gravityDirection === -1) {
-          player.gravityDirection = 1;
-          // Ensure jumpForce is reset (if needed)
-          if (player.jumpForce > 0) player.jumpForce *= -1;
-          // Snap player back to floor if necessary
-          if (player.y < FLOOR_Y - player.height) player.y = FLOOR_Y - player.height;
-        }
-      }
-    }
-
-    // Draw everything on the canvas
-    function draw() {
-      // Change background gradient based on gravity state
-      if (player.gravityDirection === 1) {
-        // Normal: cool blue gradient
-        ctx.fillStyle = "#203a43";
-      } else {
-        // Inverted: vibrant purple gradient
-        ctx.fillStyle = "#4b1248";
-      }
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Draw player (a glowing square)
-      ctx.fillStyle = "#fff";
-      ctx.shadowColor = player.gravityDirection === 1 ? "#03dac6" : "#ff4081";
-      ctx.shadowBlur = 20;
-      ctx.fillRect(player.x, player.y, player.width, player.height);
-      ctx.shadowBlur = 0;
-
-      // Draw obstacles (red blocks)
-      obstacles.forEach(ob => {
-        ctx.fillStyle = "#ff1744";
-        ctx.fillRect(ob.x, ob.y, ob.width, ob.height);
-      });
-
-      // Draw power-ups (glowing circles)
-      powerUps.forEach(pu => {
+      draw() {
+        const alpha = this.life / this.maxLife;
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = alpha;
         ctx.beginPath();
-        ctx.arc(pu.x, pu.y, pu.radius, 0, Math.PI * 2);
-        ctx.fillStyle = "#ffeb3b";
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.closePath();
-      });
-
-      // Draw HUD: Score at top-left
-      ctx.fillStyle = "#fff";
-      ctx.font = "20px Arial";
-      ctx.fillText("Score: " + score, 10, 30);
+        ctx.globalAlpha = 1;
+      }
     }
-
-    // Collision detection: Rectangle-Rectangle
-    function rectCollision(r1, r2) {
-      return (
-        r1.x < r2.x + r2.width &&
-        r1.x + r1.width > r2.x &&
-        r1.y < r2.y + r2.height &&
-        r1.y + r1.height > r2.y
-      );
+    
+    // Create the particles
+    for (let i = 0; i < particleCount; i++) {
+      particles.push(new Particle());
     }
-
-    // Collision detection: Circle-Rectangle
-    function circleRectCollision(circle, rect) {
-      // Find the closest point to the circle within the rectangle
-      let closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.width));
-      let closestY = Math.max(rect.y, Math.min(circle.y, rect.y + rect.height));
-      // Calculate the distance between the circle's center and this closest point
-      let dx = circle.x - closestX;
-      let dy = circle.y - closestY;
-      return (dx * dx + dy * dy) < (circle.radius * circle.radius);
+    
+    // Mouse interaction to influence particles
+    const mouse = { x: width / 2, y: height / 2 };
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+    
+    // Animation loop
+    function animate() {
+      // Optional: Draw a subtle radial gradient background for extra cosmic vibe
+      const gradient = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, width/2);
+      gradient.addColorStop(0, '#000');
+      gradient.addColorStop(1, '#1a1a1a');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+      
+      // Update and draw each particle
+      for (let p of particles) {
+        // Apply a gentle attraction toward the mouse if within a certain radius
+        const dx = mouse.x - p.x;
+        const dy = mouse.y - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 100) {
+          const force = (100 - dist) / 1000;
+          p.vx += dx * force;
+          p.vy += dy * force;
+        }
+        p.update();
+        p.draw();
+      }
+      requestAnimationFrame(animate);
     }
+    animate();
   </script>
 </body>
 </html>
