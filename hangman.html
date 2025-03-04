@@ -2,91 +2,348 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Infinite Celestial Parallax</title>
+  <title>Legendary Cosmic Odyssey</title>
   <style>
-    /* Reset styles and hide native scrollbars */
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      height: 100%;
-    }
-    /* The scroll container that allows user scrolling */
-    #scrollContainer {
-      position: relative;
-      width: 100%;
-      height: 100vh;
-      overflow-y: scroll;
-      scroll-behavior: smooth;
-      -webkit-overflow-scrolling: touch;
-    }
-    /* A dummy content element to provide scrollable height.
-       Here we use double the viewport height so we can seamlessly loop. */
-    .content {
-      height: 200vh; 
-    }
-    /* Parallax layers – each covers the full scrollable area.
-       The images are set to repeat vertically (repeat-y) so they can loop seamlessly.
-       Replace the example URLs with your own cosmic/galaxy images. */
-    .layer {
+    /* Reset & Global Styles */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+    .screen {
       position: absolute;
-      top: 0;
-      left: 0;
       width: 100%;
-      height: 200vh; 
-      background-repeat: repeat-y;
-      background-size: cover;
-      pointer-events: none; /* Allow scrolling through layers */
+      height: 100%;
+      top: 0; left: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: #fff;
+      text-align: center;
     }
-    .layer.layer1 {
-      background-image: url('https://example.com/cosmic1.jpg'); /* Seamless cosmic background */
-      z-index: 1;
-      opacity: 0.6;
+    #startScreen, #gameOverScreen { background: rgba(0,0,0,0.85); }
+    #gameScreen { display: none; }
+    button {
+      padding: 10px 20px;
+      font-size: 1.2em;
+      margin-top: 20px;
+      border: none;
+      border-radius: 5px;
+      background: #03dac6;
+      color: #000;
+      cursor: pointer;
+      transition: transform 0.2s;
     }
-    .layer.layer2 {
-      background-image: url('https://example.com/cosmic2.jpg');
-      z-index: 2;
-      opacity: 0.7;
-    }
-    .layer.layer3 {
-      background-image: url('https://example.com/cosmic3.jpg');
-      z-index: 3;
-      opacity: 0.8;
-    }
+    button:hover { transform: scale(1.05); }
   </style>
 </head>
 <body>
-  <div id="scrollContainer">
-    <!-- Dummy content to allow scrolling -->
-    <div class="content"></div>
-    <!-- Parallax layers -->
-    <div class="layer layer1"></div>
-    <div class="layer layer2"></div>
-    <div class="layer layer3"></div>
+  <!-- Start Screen -->
+  <div id="startScreen" class="screen">
+    <h1>Legendary Cosmic Odyssey</h1>
+    <p>Embark on an epic journey through a dynamic, cosmic universe.</p>
+    <p>Control your sleek spaceship using the arrow keys (or tap the screen) to dodge asteroids and collect cosmic orbs.</p>
+    <p>Experience breathtaking particle explosions, luminous nebulae, and a seamlessly animated starfield!</p>
+    <button id="startButton">Start Your Odyssey</button>
   </div>
-  <script>
-    const container = document.getElementById('scrollContainer');
-    const layers = document.querySelectorAll('.layer');
-    // The content height here is 200vh, which we use as the loop length.
-    const loopHeight = document.querySelector('.content').offsetHeight;
 
-    container.addEventListener('scroll', function() {
-      const scrollTop = container.scrollTop;
-      // Update each layer's vertical transform at a different speed for parallax effect.
-      layers.forEach((layer, index) => {
-        // Speed factors: adjust these multipliers to taste.
-        const speedFactor = (index + 1) * 0.3;
-        // The modulo makes the translation loop seamlessly.
-        layer.style.transform = `translateY(${-(scrollTop * speedFactor) % loopHeight}px)`;
-      });
-      // When user reaches the bottom, reset scrollTop to 0 instantly for a seamless loop.
-      if (scrollTop >= loopHeight) {
-        container.scrollTop = 0;
-      }
+  <!-- Game Screen -->
+  <div id="gameScreen" class="screen">
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="gameOverScreen" class="screen" style="display: none;">
+    <h1>Game Over</h1>
+    <p id="finalScore"></p>
+    <button id="restartButton">Restart Journey</button>
+  </div>
+
+  <script>
+    // Screen elements
+    const startScreen = document.getElementById('startScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const startButton = document.getElementById('startButton');
+    const restartButton = document.getElementById('restartButton');
+    const finalScoreEl = document.getElementById('finalScore');
+
+    // Canvas & Context
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Game State Variables
+    let gameState = 'start'; // "start", "playing", "gameover"
+    let animationId;
+    let score = 0;
+    let nebulaOffset = 0;
+    let obstacles = [];
+    let orbs = [];
+    let particles = [];
+    let stars = [];
+
+    // Spaceship object
+    let spaceship = {};
+
+    // Input handling
+    let keys = {};
+    window.addEventListener('keydown', (e) => { keys[e.key] = true; });
+    window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+
+    // Touch controls for mobile: tap to trigger thrust
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      keys[' '] = true;
+    });
+    canvas.addEventListener('touchend', (e) => {
+      keys[' '] = false;
     });
 
-    // Optional: For mobile, enable touch-drag scrolling on the container.
-    // (Native scrolling on mobile devices will trigger the scroll event above.)
+    // Initialize spaceship properties
+    function initSpaceship() {
+      spaceship = {
+        x: 100,
+        y: canvas.height / 2,
+        width: 40,
+        height: 20,
+        vy: 0,
+        gravity: 0.5,
+        thrust: -10
+      };
+    }
+
+    // Initialize starfield for a dynamic background
+    function initStars() {
+      stars = [];
+      for (let i = 0; i < 200; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          size: Math.random() * 2 + 0.5,
+          speed: Math.random() * 0.5 + 0.2
+        });
+      }
+    }
+
+    // Create an asteroid obstacle
+    function createAsteroid() {
+      return {
+        x: canvas.width + Math.random() * 100,
+        y: Math.random() * (canvas.height - 100) + 50,
+        radius: Math.random() * 20 + 15,
+        speed: Math.random() * 2 + 3
+      };
+    }
+
+    // Create a cosmic orb power-up
+    function createOrb() {
+      return {
+        x: canvas.width + Math.random() * 100,
+        y: Math.random() * (canvas.height - 100) + 50,
+        radius: 10,
+        speed: 4
+      };
+    }
+
+    // Particle explosion effect for epic visuals
+    function createParticles(x, y, color) {
+      for (let i = 0; i < 30; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          vx: (Math.random() - 0.5) * 6,
+          vy: (Math.random() - 0.5) * 6,
+          alpha: 1,
+          color: color,
+          size: Math.random() * 3 + 2
+        });
+      }
+    }
+
+    // Update game objects
+    function update() {
+      score += 1;
+      
+      // Update spaceship movement
+      if ((keys['ArrowUp'] || keys[' ']) && spaceship.y > 0) {
+        spaceship.vy = spaceship.thrust;
+      }
+      spaceship.vy += spaceship.gravity;
+      spaceship.y += spaceship.vy;
+      
+      // Keep spaceship within canvas bounds
+      if (spaceship.y + spaceship.height > canvas.height) {
+        spaceship.y = canvas.height - spaceship.height;
+        spaceship.vy = 0;
+      }
+      if (spaceship.y < 0) {
+        spaceship.y = 0;
+        spaceship.vy = 0;
+      }
+      
+      // Spawn asteroids randomly
+      if (Math.random() < 0.02) {
+        obstacles.push(createAsteroid());
+      }
+      
+      // Spawn cosmic orbs occasionally
+      if (Math.random() < 0.005) {
+        orbs.push(createOrb());
+      }
+      
+      // Update obstacles
+      obstacles.forEach(ob => {
+        ob.x -= ob.speed;
+      });
+      obstacles = obstacles.filter(ob => ob.x + ob.radius > 0);
+      
+      // Update orbs
+      orbs.forEach(o => {
+        o.x -= o.speed;
+      });
+      orbs = orbs.filter(o => o.x + o.radius > 0);
+      
+      // Update particle effects
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.02;
+      });
+      particles = particles.filter(p => p.alpha > 0);
+      
+      // Update starfield (scrolling slowly to the left)
+      stars.forEach(s => {
+        s.x -= s.speed;
+        if (s.x < 0) s.x = canvas.width;
+      });
+      
+      // Update nebula layer offset for parallax effect
+      nebulaOffset -= 0.3;
+      if (nebulaOffset < -canvas.width) nebulaOffset = 0;
+      
+      // Collision detection: spaceship vs. asteroids
+      for (let ob of obstacles) {
+        let dx = (spaceship.x + spaceship.width / 2) - ob.x;
+        let dy = (spaceship.y + spaceship.height / 2) - ob.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < ob.radius + Math.max(spaceship.width, spaceship.height) / 2) {
+          createParticles(spaceship.x + spaceship.width/2, spaceship.y + spaceship.height/2, '#ff1744');
+          endGame();
+          return;
+        }
+      }
+      
+      // Collision detection: spaceship vs. cosmic orbs
+      for (let i = orbs.length - 1; i >= 0; i--) {
+        let orb = orbs[i];
+        let dx = (spaceship.x + spaceship.width / 2) - orb.x;
+        let dy = (spaceship.y + spaceship.height / 2) - orb.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < orb.radius + Math.max(spaceship.width, spaceship.height) / 2) {
+          score += 200;
+          createParticles(orb.x, orb.y, '#ffeb3b');
+          orbs.splice(i, 1);
+        }
+      }
+    }
+
+    // Draw everything on the canvas
+    function draw() {
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw animated starfield background
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#fff";
+      stars.forEach(s => {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      
+      // Draw nebula parallax layer (a moving gradient overlay)
+      let nebulaGradient = ctx.createLinearGradient(nebulaOffset, 0, nebulaOffset + canvas.width, 0);
+      nebulaGradient.addColorStop(0, "rgba(63, 81, 181, 0.3)");
+      nebulaGradient.addColorStop(1, "rgba(156, 39, 176, 0.3)");
+      ctx.fillStyle = nebulaGradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw spaceship with a glowing effect
+      ctx.save();
+      ctx.shadowColor = "#03dac6";
+      ctx.shadowBlur = 20;
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(spaceship.x, spaceship.y, spaceship.width, spaceship.height);
+      ctx.restore();
+      
+      // Draw asteroids
+      ctx.fillStyle = "#ff1744";
+      obstacles.forEach(ob => {
+        ctx.beginPath();
+        ctx.arc(ob.x, ob.y, ob.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      
+      // Draw cosmic orbs
+      ctx.fillStyle = "#ffeb3b";
+      orbs.forEach(o => {
+        ctx.beginPath();
+        ctx.arc(o.x, o.y, o.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      
+      // Draw particles (for explosion effects)
+      particles.forEach(p => {
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+      
+      // Draw HUD: Display score
+      ctx.fillStyle = "#fff";
+      ctx.font = "20px Arial";
+      ctx.fillText("Score: " + score, 10, 30);
+    }
+
+    // Main game loop
+    function gameLoop() {
+      update();
+      draw();
+      if (gameState === 'playing') {
+        animationId = requestAnimationFrame(gameLoop);
+      }
+    }
+
+    // End game and show Game Over screen
+    function endGame() {
+      gameState = 'gameover';
+      cancelAnimationFrame(animationId);
+      finalScoreEl.textContent = "Your Score: " + score;
+      gameScreen.style.display = "none";
+      gameOverScreen.style.display = "flex";
+    }
+
+    // Start or restart the game
+    function startGame() {
+      gameState = 'playing';
+      score = 0;
+      nebulaOffset = 0;
+      obstacles = [];
+      orbs = [];
+      particles = [];
+      initSpaceship();
+      initStars();
+      startScreen.style.display = "none";
+      gameOverScreen.style.display = "none";
+      gameScreen.style.display = "flex";
+      animationId = requestAnimationFrame(gameLoop);
+    }
+
+    // Button event listeners
+    startButton.addEventListener('click', startGame);
+    restartButton.addEventListener('click', startGame);
   </script>
 </body>
 </html>
