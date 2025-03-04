@@ -2,424 +2,325 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Phantom Maze: Pac-Shift (Mobile & Desktop)</title>
+  <title>Legendary Doodle Jump</title>
   <style>
-    body {
-      margin: 0;
-      background: #000;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      display: flex;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #222; font-family: 'Segoe UI', sans-serif; color: #fff; overflow: hidden; }
+    .screen {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
       flex-direction: column;
+      justify-content: center;
       align-items: center;
+      text-align: center;
+      padding: 20px;
     }
-    h1 {
-      margin-top: 20px;
-    }
-    #gameCanvas {
-      background: #111;
-      display: block;
-      margin: 20px auto;
-      border: 2px solid #fff;
-      touch-action: none; /* Prevents default swipe behavior */
-    }
-    #status {
-      margin-top: 10px;
+    #startScreen, #loseScreen { display: flex; }
+    h1 { font-size: 3em; margin-bottom: 20px; text-shadow: 2px 2px 4px #000; }
+    p, li { font-size: 1.2em; margin-bottom: 10px; }
+    ul { text-align: left; }
+    button {
+      padding: 12px 24px;
       font-size: 1.2em;
-    }
-    /* Mobile controls container */
-    #mobileControls {
-      display: none; /* Show only on mobile/small screens */
-      margin: 10px;
-    }
-    .control-btn {
-      background: #03dac6;
       border: none;
-      color: #000;
-      padding: 15px;
-      margin: 5px;
-      font-size: 1.2em;
       border-radius: 5px;
-      width: 60px;
+      background: #03dac6;
+      color: #222;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: transform 0.2s;
     }
-    /* D-Pad layout */
-    .dpad {
-      display: grid;
-      grid-template-areas: 
-        "up up up"
-        "left center right"
-        "down down down";
-      grid-gap: 5px;
-      justify-items: center;
-      align-items: center;
-    }
-    .dpad button:nth-child(1) { grid-area: up; }
-    .dpad button:nth-child(2) { grid-area: left; }
-    .dpad button:nth-child(3) { grid-area: right; }
-    .dpad button:nth-child(4) { grid-area: down; }
-    /* Show mobile controls on smaller screens */
-    @media (max-width: 768px) {
-      #mobileControls {
-        display: block;
-      }
-    }
+    button:hover { transform: scale(1.05); }
+    #gameScreen { background: #000; display: flex; flex-direction: column; }
+    #gameCanvas { background: #333; border: 3px solid #fff; margin: 10px auto; display: block; }
   </style>
 </head>
 <body>
-  <h1>Phantom Maze: Pac-Shift</h1>
-  <canvas id="gameCanvas" width="600" height="600"></canvas>
-  <div id="status">Score: 0 | Phase Shift: OFF</div>
-  
-  <!-- Power-up & Reset Buttons -->
-  <div id="actionButtons">
-    <button id="doubleMoveBtn">Double Move</button>
-    <button id="swapMoveBtn">Swap Move</button>
-    <button id="resetBtn">Reset Game</button>
+  <!-- Start Menu Screen -->
+  <div id="startScreen" class="screen">
+    <h1>Legendary Doodle Jump</h1>
+    <p>Welcome to a doodle jump experience like no other!</p>
+    <p><strong>How to Play:</strong></p>
+    <ul>
+      <li>Use the left/right arrow keys (or tap left/right on mobile) to move.</li>
+      <li>Jump on platforms to climb higher.</li>
+      <li>Collect power-ups for epic boosts:</li>
+      <ul>
+        <li><strong>Jetpack:</strong> Gives an extra-boost jump!</li>
+        <li><strong>Slow Motion:</strong> Temporarily slows gravity.</li>
+      </ul>
+      <li>The higher you go, the faster the level—and the tougher it gets!</li>
+      <li>If you fall below the screen, the game is over.</li>
+    </ul>
+    <button id="startButton">Start Game</button>
   </div>
 
-  <!-- Mobile Controls -->
-  <div id="mobileControls">
-    <div class="dpad">
-      <button class="control-btn" id="btnUp">↑</button>
-      <button class="control-btn" id="btnLeft">←</button>
-      <button class="control-btn" id="btnRight">→</button>
-      <button class="control-btn" id="btnDown">↓</button>
-    </div>
+  <!-- Game Screen -->
+  <div id="gameScreen" class="screen">
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+  </div>
+
+  <!-- Lose Screen -->
+  <div id="loseScreen" class="screen">
+    <h1>Game Over</h1>
+    <p id="finalScore"></p>
+    <button id="restartButton">Restart Game</button>
   </div>
 
   <script>
+    // Screen elements
+    const startScreen = document.getElementById("startScreen");
+    const gameScreen = document.getElementById("gameScreen");
+    const loseScreen = document.getElementById("loseScreen");
+    const startButton = document.getElementById("startButton");
+    const restartButton = document.getElementById("restartButton");
+    const finalScoreEl = document.getElementById("finalScore");
+
+    // Canvas & Context
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
-    const statusDiv = document.getElementById("status");
-    const doubleMoveBtn = document.getElementById("doubleMoveBtn");
-    const swapMoveBtn = document.getElementById("swapMoveBtn");
-    const resetBtn = document.getElementById("resetBtn");
 
-    // Grid settings
-    const ROWS = 15, COLS = 15;
-    const CELL_SIZE = 40; // 600/15 = 40 pixels per cell
-
-    // Maze cell types:
-    // 0: empty, 1: permanent wall, 2: dot, 3: phase power-up, 4: shifting wall
-    let maze = [];
+    // Game variables
+    let animationFrameId;
     let gameOver = false;
     let score = 0;
+    let level = 1;
+    const gravity = 0.5;
+    const friction = 0.9;
 
-    // Initialize maze layout randomly
-    function initMaze() {
-      maze = [];
-      for (let r = 0; r < ROWS; r++) {
-        let row = [];
-        for (let c = 0; c < COLS; c++) {
-          if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) {
-            row.push(1);
-          } else {
-            if (Math.random() < 0.2) {
-              row.push(Math.random() < 0.5 ? 4 : 1);
-            } else {
-              row.push(2);
-            }
-          }
-        }
-        maze.push(row);
-      }
-      // Place two phase power-ups at random dot locations
-      let count = 0;
-      while (count < 2) {
-        let r = Math.floor(Math.random() * ROWS);
-        let c = Math.floor(Math.random() * COLS);
-        if (maze[r][c] === 2) {
-          maze[r][c] = 3;
-          count++;
-        }
-      }
-      // Clear starting positions for player and ghost
-      maze[1][1] = 0;
-      maze[ROWS - 2][COLS - 2] = 0;
-    }
-
-    // Player object
+    // Player (the doodler)
     let player = {
-      row: 1,
-      col: 1,
-      phaseShift: false,
-      phaseTime: 0
+      x: canvas.width / 2 - 15,
+      y: 500,
+      width: 30,
+      height: 30,
+      vx: 0,
+      vy: 0,
+      jumpForce: -12,
+      powerUp: null,   // "jetpack" or "slow"
+      powerUpTime: 0   // frames remaining for power-up
     };
 
-    // Ghost object (one ghost for simplicity)
-    let ghosts = [{ row: ROWS - 2, col: COLS - 2 }];
+    // Platforms array
+    let platforms = [];
+    // Power-ups array: each has x, y, width, height, type ("jetpack" or "slow")
+    let powerUps = [];
 
-    function updateStatus() {
-      statusDiv.innerHTML = "Score: " + score + " | Phase Shift: " +
-        (player.phaseShift ? "ON (" + Math.ceil(player.phaseTime / 1000) + "s)" : "OFF");
-    }
+    // Key input tracking
+    let keys = {};
+    document.addEventListener("keydown", (e) => { keys[e.code] = true; });
+    document.addEventListener("keyup", (e) => { keys[e.code] = false; });
 
-    // Draw maze grid with walls, dots, and power-ups
-    function drawMaze() {
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          let cell = maze[r][c];
-          let x = c * CELL_SIZE;
-          let y = r * CELL_SIZE;
-          if (cell === 1) {
-            ctx.fillStyle = "#444"; // permanent wall
-            ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
-          } else if (cell === 4) {
-            ctx.fillStyle = "#888"; // shifting wall
-            ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
-          } else {
-            ctx.fillStyle = "#000"; // empty cell
-            ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
-            if (cell === 2) {
-              ctx.fillStyle = "#fff";
-              ctx.beginPath();
-              ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, 4, 0, 2 * Math.PI);
-              ctx.fill();
-            } else if (cell === 3) {
-              ctx.fillStyle = "#0ff";
-              ctx.beginPath();
-              ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, 8, 0, 2 * Math.PI);
-              ctx.fill();
-            }
-          }
-        }
+    // Touch controls for mobile: tap left/right half of canvas
+    canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      let touchX = e.touches[0].clientX;
+      if (touchX < canvas.width / 2) keys["ArrowLeft"] = true;
+      else keys["ArrowRight"] = true;
+    });
+    canvas.addEventListener("touchend", () => {
+      keys["ArrowLeft"] = false;
+      keys["ArrowRight"] = false;
+    });
+
+    // Initialize platforms
+    function initPlatforms() {
+      platforms = [];
+      // Create a base platform
+      platforms.push({ x: 150, y: 580, width: 100, height: 10 });
+      // Create several platforms upward
+      for (let i = 0; i < 10; i++) {
+        platforms.push({
+          x: Math.random() * (canvas.width - 80),
+          y: 600 - i * 60,
+          width: 80 + Math.random() * 40,
+          height: 10
+        });
       }
     }
 
-    // Draw player (yellow normally, blue in phase mode)
-    function drawPlayer() {
-      let x = player.col * CELL_SIZE + CELL_SIZE/2;
-      let y = player.row * CELL_SIZE + CELL_SIZE/2;
-      ctx.beginPath();
-      ctx.arc(x, y, CELL_SIZE/2 - 4, 0, 2 * Math.PI);
-      ctx.fillStyle = player.phaseShift ? "#00f" : "#ff0";
-      ctx.fill();
+    // Possibly add a power-up on a platform (20% chance)
+    function maybeAddPowerUp(platform) {
+      if (Math.random() < 0.2) {
+        let type = Math.random() < 0.5 ? "jetpack" : "slow";
+        powerUps.push({
+          x: platform.x + platform.width / 2 - 10,
+          y: platform.y - 20,
+          width: 20,
+          height: 20,
+          type: type
+        });
+      }
     }
 
-    // Draw ghost (red normally, orange when fleeing)
-    function drawGhosts() {
-      ghosts.forEach(ghost => {
-        let x = ghost.col * CELL_SIZE + CELL_SIZE/2;
-        let y = ghost.row * CELL_SIZE + CELL_SIZE/2;
-        ctx.beginPath();
-        ctx.arc(x, y, CELL_SIZE/2 - 4, 0, 2 * Math.PI);
-        ctx.fillStyle = player.phaseShift ? "#ffa500" : "#f00";
-        ctx.fill();
+    // Initialize/restart the game
+    function initGame() {
+      gameOver = false;
+      score = 0;
+      level = 1;
+      player.x = canvas.width / 2 - 15;
+      player.y = 500;
+      player.vx = 0;
+      player.vy = 0;
+      player.powerUp = null;
+      player.powerUpTime = 0;
+      player.jumpForce = -12;
+      initPlatforms();
+      powerUps = [];
+    }
+
+    // Update game state
+    function update() {
+      // Handle left/right input
+      if (keys["ArrowLeft"]) player.vx = -5;
+      else if (keys["ArrowRight"]) player.vx = 5;
+      else player.vx *= friction;
+
+      // Apply gravity (or slow gravity if power-up active)
+      if (player.powerUp === "slow") player.vy += gravity * 0.3;
+      else player.vy += gravity;
+
+      // Update player position
+      player.x += player.vx;
+      player.y += player.vy;
+
+      // Horizontal wrap-around
+      if (player.x < -player.width) player.x = canvas.width;
+      if (player.x > canvas.width) player.x = -player.width;
+
+      // Check collision with platforms (only when falling)
+      for (let plat of platforms) {
+        if (player.vy > 0 &&
+            player.x + player.width > plat.x &&
+            player.x < plat.x + plat.width &&
+            player.y + player.height > plat.y &&
+            player.y + player.height < plat.y + plat.height + player.vy) {
+          player.y = plat.y - player.height;
+          player.vy = player.jumpForce;
+          score += 10;
+          maybeAddPowerUp(plat);
+        }
+      }
+
+      // Check collision with power-ups
+      for (let i = powerUps.length - 1; i >= 0; i--) {
+        let pu = powerUps[i];
+        if (player.x < pu.x + pu.width &&
+            player.x + player.width > pu.x &&
+            player.y < pu.y + pu.height &&
+            player.y + player.height > pu.y) {
+          // Activate power-up effect
+          if (pu.type === "jetpack") {
+            player.vy = player.jumpForce * 1.5;
+          } else if (pu.type === "slow") {
+            player.powerUp = "slow";
+            player.powerUpTime = 300; // lasts ~5 seconds (300 frames)
+          }
+          powerUps.splice(i, 1);
+          score += 50;
+        }
+      }
+
+      // Power-up timer decrement
+      if (player.powerUp) {
+        player.powerUpTime--;
+        if (player.powerUpTime <= 0) player.powerUp = null;
+      }
+
+      // If player reaches upper half, scroll platforms and power-ups downward
+      if (player.y < canvas.height / 2) {
+        let diff = canvas.height / 2 - player.y;
+        player.y = canvas.height / 2;
+        platforms.forEach(plat => plat.y += diff);
+        powerUps.forEach(pu => pu.y += diff);
+        score += Math.floor(diff);
+      }
+
+      // Remove platforms that have scrolled off-screen and add new ones
+      platforms = platforms.filter(plat => plat.y < canvas.height);
+      while (platforms.length < 12) {
+        platforms.push({
+          x: Math.random() * (canvas.width - 80),
+          y: -Math.random() * 20,
+          width: 80 + Math.random() * 40,
+          height: 10
+        });
+      }
+
+      // Level progression: every 500 points, increase level and challenge
+      if (score > level * 500) {
+        level++;
+        // Make the jump a bit more challenging
+        player.jumpForce -= 1;
+      }
+
+      // Game over condition: player falls below the screen
+      if (player.y > canvas.height) endGame();
+    }
+
+    // Draw everything on the canvas
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Background
+      ctx.fillStyle = "#333";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Platforms
+      ctx.fillStyle = "#8bc34a";
+      platforms.forEach(plat => {
+        ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
       });
+      // Power-ups
+      powerUps.forEach(pu => {
+        if (pu.type === "jetpack") ctx.fillStyle = "#ffeb3b";
+        else if (pu.type === "slow") ctx.fillStyle = "#03a9f4";
+        ctx.fillRect(pu.x, pu.y, pu.width, pu.height);
+      });
+      // Player (a simple white square)
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+      // HUD: Score, Level, and active Power-Up
+      ctx.fillStyle = "#fff";
+      ctx.font = "16px Arial";
+      ctx.fillText("Score: " + score, 10, 20);
+      ctx.fillText("Level: " + level, 10, 40);
+      if (player.powerUp) {
+        ctx.fillText("Power-Up: " + player.powerUp, 10, 60);
+      }
     }
 
     // Main game loop
     function gameLoop() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawMaze();
-      drawPlayer();
-      drawGhosts();
-      updateStatus();
-
-      if (player.phaseShift) {
-        player.phaseTime -= 16;
-        if (player.phaseTime <= 0) {
-          player.phaseShift = false;
-          player.phaseTime = 0;
-        }
-      }
-
-      if (!gameOver) requestAnimationFrame(gameLoop);
+      update();
+      draw();
+      animationFrameId = requestAnimationFrame(gameLoop);
     }
 
-    // Movement function: attempts to move player to a new cell
-    function movePlayer(newRow, newCol) {
-      if (!gameOver && canMoveTo(newRow, newCol)) {
-        player.row = newRow;
-        player.col = newCol;
-        checkCell(newRow, newCol);
-        checkGhostCollision();
-      }
+    // End the game, show lose screen
+    function endGame() {
+      cancelAnimationFrame(animationFrameId);
+      gameScreen.style.display = "none";
+      loseScreen.style.display = "flex";
+      finalScoreEl.textContent = "Your Score: " + score;
     }
 
-    // Check if cell is walkable
-    function canMoveTo(r, c) {
-      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return false;
-      let cell = maze[r][c];
-      return cell !== 1 && cell !== 4;
-    }
-
-    // Process cell actions when moving onto it
-    function checkCell(r, c) {
-      let cell = maze[r][c];
-      if (cell === 2) {
-        score += 10;
-        maze[r][c] = 0;
-      } else if (cell === 3) {
-        score += 50;
-        player.phaseShift = true;
-        player.phaseTime = 10000;
-        maze[r][c] = 0;
-      }
-    }
-
-    // Ghost AI movement (runs every 500ms)
-    function moveGhosts() {
-      ghosts.forEach(ghost => {
-        let directions = [];
-        let r = ghost.row, c = ghost.col;
-        if (isCellWalkable(r - 1, c)) directions.push({ r: r - 1, c: c });
-        if (isCellWalkable(r + 1, c)) directions.push({ r: r + 1, c: c });
-        if (isCellWalkable(r, c - 1)) directions.push({ r: r, c: c - 1 });
-        if (isCellWalkable(r, c + 1)) directions.push({ r: r, c: c + 1 });
-        if (directions.length === 0) return;
-        let bestDir = directions[0];
-        let bestDist = distance(bestDir.r, bestDir.c, player.row, player.col);
-        directions.forEach(dir => {
-          let d = distance(dir.r, dir.c, player.row, player.col);
-          if (player.phaseShift) {
-            if (d > bestDist) { bestDist = d; bestDir = dir; }
-          } else {
-            if (d < bestDist) { bestDist = d; bestDir = dir; }
-          }
-        });
-        ghost.row = bestDir.r;
-        ghost.col = bestDir.c;
-      });
-      checkGhostCollision();
-    }
-
-    // Check if ghost and player collide
-    function checkGhostCollision() {
-      ghosts.forEach(ghost => {
-        if (ghost.row === player.row && ghost.col === player.col) {
-          if (player.phaseShift) {
-            score += 200;
-            ghost.row = ROWS - 2;
-            ghost.col = COLS - 2;
-          } else {
-            gameOver = true;
-            updateStatus();
-            alert("Game Over! Final Score: " + score);
-          }
-        }
-      });
-    }
-
-    // Helper for ghost movement: check walkability for ghosts
-    function isCellWalkable(r, c) {
-      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return false;
-      let cell = maze[r][c];
-      return cell !== 1 && cell !== 4;
-    }
-
-    // Manhattan distance helper
-    function distance(r1, c1, r2, c2) {
-      return Math.abs(r1 - r2) + Math.abs(c1 - c2);
-    }
-
-    // Maze shifting: toggle shifting walls (type 4) every 3 seconds
-    function shiftMaze() {
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          if (maze[r][c] === 4) {
-            maze[r][c] = Math.random() < 0.5 ? 0 : 4;
-          }
-        }
-      }
-    }
-
-    // Set intervals for ghost movement and maze shifting
-    setInterval(() => { if (!gameOver) moveGhosts(); }, 500);
-    setInterval(() => { if (!gameOver) shiftMaze(); }, 3000);
-
-    // Keyboard controls for desktop
-    document.addEventListener("keydown", (e) => {
-      if (gameOver) return;
-      let newRow = player.row;
-      let newCol = player.col;
-      if (e.key === "ArrowUp") newRow--;
-      else if (e.key === "ArrowDown") newRow++;
-      else if (e.key === "ArrowLeft") newCol--;
-      else if (e.key === "ArrowRight") newCol++;
-      movePlayer(newRow, newCol);
+    // Start or restart game when buttons are clicked
+    startButton.addEventListener("click", () => {
+      startScreen.style.display = "none";
+      loseScreen.style.display = "none";
+      gameScreen.style.display = "flex";
+      initGame();
+      gameLoop();
     });
-
-    // Mobile on-screen controls
-    document.getElementById("btnUp").addEventListener("click", () => movePlayer(player.row - 1, player.col));
-    document.getElementById("btnDown").addEventListener("click", () => movePlayer(player.row + 1, player.col));
-    document.getElementById("btnLeft").addEventListener("click", () => movePlayer(player.row, player.col - 1));
-    document.getElementById("btnRight").addEventListener("click", () => movePlayer(player.row, player.col + 1));
-
-    // Swipe detection for mobile (optional enhancement)
-    let touchStartX = 0, touchStartY = 0;
-    canvas.addEventListener("touchstart", (e) => {
-      let touch = e.changedTouches[0];
-      touchStartX = touch.screenX;
-      touchStartY = touch.screenY;
+    restartButton.addEventListener("click", () => {
+      loseScreen.style.display = "none";
+      startScreen.style.display = "none";
+      gameScreen.style.display = "flex";
+      initGame();
+      gameLoop();
     });
-    canvas.addEventListener("touchend", (e) => {
-      let touch = e.changedTouches[0];
-      let deltaX = touch.screenX - touchStartX;
-      let deltaY = touch.screenY - touchStartY;
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        // Horizontal swipe
-        if (deltaX > 0) movePlayer(player.row, player.col + 1);
-        else movePlayer(player.row, player.col - 1);
-      } else {
-        // Vertical swipe
-        if (deltaY > 0) movePlayer(player.row + 1, player.col);
-        else movePlayer(player.row - 1, player.col);
-      }
-    });
-
-    // Action Buttons (Double Move & Swap Move) remain the same as before
-    doubleMoveBtn.addEventListener("click", () => {
-      if (!gameOver && !doubleMoveUsed[currentPlayer()]) {
-        allowedMoves = 2;
-        doubleMoveUsed[currentPlayer()] = true;
-        doubleMoveBtn.disabled = true;
-        updateStatus();
-      }
-    });
-    swapMoveBtn.addEventListener("click", () => {
-      if (!gameOver && !swapMoveUsed[currentPlayer()]) {
-        swapActive = true;
-        swapMoveUsed[currentPlayer()] = true;
-        swapMoveBtn.disabled = true;
-        updateStatus();
-      }
-    });
-    resetBtn.addEventListener("click", () => {
-      score = 0;
-      gameOver = false;
-      initMaze();
-      player.row = 1;
-      player.col = 1;
-      player.phaseShift = false;
-      player.phaseTime = 0;
-      ghosts = [{ row: ROWS - 2, col: COLS - 2 }];
-      updateStatus();
-      requestAnimationFrame(gameLoop);
-    });
-
-    // For power-up tracking (dummy functions for now, as original code had similar structure)
-    let allowedMoves = 1;
-    let doubleMoveUsed = { "X": false, "O": false };
-    let swapMoveUsed = { "X": false, "O": false };
-    let swapActive = false;
-    function currentPlayer() { return "X"; } // Placeholder if needed for power-ups
-
-    // Start game
-    function initGame() {
-      score = 0;
-      gameOver = false;
-      initMaze();
-      player.row = 1;
-      player.col = 1;
-      player.phaseShift = false;
-      player.phaseTime = 0;
-      ghosts = [{ row: ROWS - 2, col: COLS - 2 }];
-      updateStatus();
-      requestAnimationFrame(gameLoop);
-    }
-    initGame();
   </script>
 </body>
 </html>
