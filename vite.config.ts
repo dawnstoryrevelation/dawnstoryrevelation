@@ -10,7 +10,7 @@ export default defineConfig({
     },
   },
   server: {
-    historyApiFallback: true,  // This ensures history mode routing works correctly
+    historyApiFallback: true, // This ensures Vue Router works with history mode
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
@@ -22,9 +22,9 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: fileURLToPath(new URL('./index.html', import.meta.url)), // We continue to serve the proper SPA entry point
+        main: fileURLToPath(new URL('./app.html', import.meta.url)), // Use app.html as the entry point
       },
     },
   },
-  base: '/', // Ensures proper path resolution for routing and assets
+  base: '/',  // Ensures the correct path resolution
 });
